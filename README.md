@@ -19,14 +19,14 @@ Upload the new file with the **same name** and commit. It replaces the old one a
 
 | File | Lab |
 |---|---|
+| `statistics-probability.html` | Statistics & Probability Lab (DSP 301, lecture 1) |
+| `adc-dac.html` | ADC & DAC Lab: quantisation, aliasing, sampling and reconstruction (DSP 301, lecture 2) |
+| `convolution.html` | Convolution Machine (DSP 301, lecture 4) |
+| `dft.html` | DFT Lab (DSP 301, lecture 5) |
 | `spectrum.html` | Spectrum Lab (DSP 302, lecture 1) |
 | `discrete-signals.html` | Discrete Signals Lab (DSP 302, lecture 2) |
 | `z-transform.html` | z-Transform Lab (DSP 302, lectures 3–4) |
 | `filter-design.html` | Filter Design Lab (DSP 302, lecture 5) |
 | `dsp-hardware.html` | DSP Hardware Lab (DSP 302, lecture 6) |
-| `sampling.html` | Sampling and Reconstruction Lab (lecture 2) |
-| `adc.html` | ADC Lab (lecture 2) |
-| `convolution.html` | Convolution Machine (lecture 4) |
-| `dft.html` | DFT Lab (lecture 5) |
 
 `.nojekyll` tells GitHub Pages to serve the files exactly as they are.
