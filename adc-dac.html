@@ -168,22 +168,23 @@ footer{color:var(--muted);font-size:.8rem}
       <div class="group">
         <h2>Input signal</h2>
         <div class="field"><label class="lbl" for="qSig">Signal</label>
-          <select id="qSig"><option value="multi">Multi-tone (notebook signal, 4–100 Hz)</option><option value="sine">Sine wave</option></select></div>
+          <select id="qSig"><option value="multi">Multi-tone (5 cosines, as in tab 3)</option><option value="sine">Sine wave</option></select></div>
         <div class="field"><label class="lbl" for="qGain"><span id="qGainL">Gain</span> <output id="qGaino"></output></label><input type="range" id="qGain" min="0.05" max="10" step="0.05"></div>
-        <div class="field" id="qFF"><label class="lbl" for="qF">Sine frequency <output id="qFo"></output></label><input type="range" id="qF" min="1" max="100" step="1"></div>
+        <div class="field" id="qBaseF"><label class="lbl" for="qBase">Lowest tone <output id="qBaseo"></output></label><input type="range" id="qBase" min="1" max="60" step="1"></div>
+        <div class="field" id="qFF"><label class="lbl" for="qF">Sine frequency <output id="qFo"></output></label><input type="range" id="qF" min="1" max="50" step="1"></div>
       </div>
       <div class="group">
         <h2>ADC</h2>
-        <div class="field"><label class="lbl" for="qRef">Input range ±Vref <output id="qRefo"></output></label><input type="range" id="qRef" min="1" max="10" step="0.5"></div>
+        <div class="field"><label class="lbl" for="qRef">Input range ±Vref <output id="qRefo"></output></label><input type="range" id="qRef" min="1" max="10" step="0.1"></div>
         <div class="field"><label class="lbl" for="qBits">Bits N <output id="qBitso"></output></label><input type="range" id="qBits" min="1" max="16" step="1"></div>
-        <div class="field"><label class="lbl" for="qFs">Sampling rate Fs <output id="qFso"></output></label><input type="range" id="qFs" min="50" max="5000" step="50"></div>
+        <div class="field"><label class="lbl" for="qFs">Sampling rate Fs <output id="qFso"></output></label><input type="range" id="qFs" min="10" max="100" step="1"></div>
         <div class="field"><label class="lbl" for="qConv">Level spacing</label>
           <select id="qConv"><option value="std">Standard: LSB = 2Vref / 2ᴺ</option><option value="nb">Notebook: LSB = 2Vref / (2ᴺ − 1)</option></select></div>
         <label class="chk"><input type="checkbox" id="qDither"> Add dither (±½ LSB noise before the quantiser)</label>
       </div>
       <div class="group">
         <h2>Display</h2>
-        <div class="field"><label class="lbl" for="qZoom">Time window <output id="qZoomo"></output></label><input type="range" id="qZoom" min="0.01" max="1" step="0.01"></div>
+        <div class="field"><label class="lbl" for="qZoom">Time window <output id="qZoomo"></output></label><input type="range" id="qZoom" min="0.05" max="2" step="0.05"></div>
         <label class="chk"><input type="checkbox" id="qShO"> Original signal</label>
         <label class="chk"><input type="checkbox" id="qShS"> Samples</label>
         <label class="chk"><input type="checkbox" id="qShH"> Sample-and-hold</label>
@@ -284,6 +285,8 @@ footer{color:var(--muted);font-size:.8rem}
     <div class="ctl">
       <h2><span class="n">3</span>Sample (impulse train)</h2>
       <div class="field"><label class="lbl" for="fs">Sampling rate Fs <output id="fso"></output></label><input type="range" id="fs" min="10" max="100" step="1" value="40"></div>
+      <label class="chk"><input type="checkbox" id="sQuant"> Quantise the samples with the ADC from tab 1</label>
+      <p id="sQi" style="margin:-4px 0 0;font-size:.8rem;color:var(--muted)"></p>
       <p class="info" id="iS"></p>
     </div>
     <div class="plot"><div class="ptitle"><b>Time</b><span class="key"><i style="background:var(--teal)"></i>samples x[n]</span><span class="key"><i style="background:var(--orange);opacity:.35"></i>signal being sampled</span></div><canvas id="cST"></canvas></div>
@@ -319,7 +322,7 @@ footer{color:var(--muted);font-size:.8rem}
 
   </section>
 
-  <footer>Dr. Seán Mullery · Atlantic Technological University. Quantisation and aliasing: the analogue signal is computed exactly at each sample instant; quantisation statistics use a 1 s record. Sampling and reconstruction: the analogue world is simulated at 2048 samples/s over a 4 s record, after Steven W. Smith, <i>The Scientist and Engineer's Guide to DSP</i>, ch. 3. Butterworth, Chebyshev and Bessel filters run as causal analogue filters, so their delay, overshoot and ringing appear as they would in hardware; the ideal filter is applied in the frequency domain and is non-causal. Works offline once downloaded.</footer>
+  <footer>Dr. Seán Mullery · Atlantic Technological University. Quantisation and aliasing: the analogue signal is computed exactly at each sample instant; quantisation statistics use 20 000 samples, each second taken at a different sampling phase. Sampling and reconstruction: the analogue world is simulated at 2048 samples/s over a 4 s record, after Steven W. Smith, <i>The Scientist and Engineer's Guide to DSP</i>, ch. 3. Butterworth, Chebyshev and Bessel filters run as causal analogue filters, so their delay, overshoot and ringing appear as they would in hardware; the ideal filter is applied in the frequency domain and is non-causal. Works offline once downloaded.</footer>
 </div>
 <script>
 (function(){
@@ -411,6 +414,18 @@ function tones(){
   if(S.rogue)T.push([S.rf,1]);
   return T}
 
+/* ---- optional quantisation, using tab 1's ADC settings ---- */
+function adcSet(){const A=window.ADCLAB&&window.ADCLAB.S;return A?{g:A.qSig==='multi'?A.qGain:1,ref:A.qRef,N:A.qBits,conv:A.qConv,dither:A.qDither}:{g:1,ref:5,N:8,conv:'std',dither:false}}
+function adcKey(){const a=adcSet();return [a.g,a.ref,a.N,a.conv,a.dither].join('|')}
+function quantise(xs){const a=adcSet(),L=Math.pow(2,a.N),nb=a.conv==='nb',lsb=nb?2*a.ref/(L-1):2*a.ref/L;
+  let r=97531;const rnd=()=>{r|=0;r=r+0x6D2B79F5|0;let t=Math.imul(r^r>>>15,1|r);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+  let clip=0,ps=0,pe=0;
+  for(let n=0;n<xs.length;n++){const v=xs[n]*a.g,d=a.dither?(rnd()-0.5)*lsb:0;let c,q;
+    if(v>a.ref||v<-a.ref)clip++;
+    if(nb){c=Math.min(L-1,Math.max(0,Math.round((v+d+a.ref)/lsb)));q=c*lsb-a.ref}else{c=Math.min(L-1,Math.max(0,Math.round((v+d)/lsb)+L/2));q=(c-L/2)*lsb}
+    const qv=q/a.g;ps+=xs[n]*xs[n];pe+=(xs[n]-qv)**2;xs[n]=qv}
+  return{a,lsb,clip,n:xs.length,sqnr:pe>0?10*Math.log10(ps/pe):Infinity}}
+
 /* ================= pipeline ================= */
 function compute(){
   const fs=S.fs, T=tones();
@@ -425,6 +440,7 @@ function compute(){
   // 3 sample at exact instants n/Fs (linear interpolation on the 2048/s grid)
   const ns=Math.round(TREC*fs);const xs=new Float64Array(ns);
   for(let n=0;n<ns;n++){const p=n/fs*FSIM,i=Math.floor(p),fr=p-i;xs[n]=R.xa[i%N]*(1-fr)+R.xa[(i+1)%N]*fr}
+  R.qz=null;if(S.quant){R.qz=quantise(xs)}R.qKey=adcKey();
   R.xs=xs;
   // impulse-train spectrum by direct DTFT at the 0.25 Hz bins: Xs(f)=(1/Fs)Σ x[n] e^{-j2πfn/Fs}
   const K=Math.ceil(Math.max(S.fmax,320)/DF);const sr=new Float64Array(K+1),si=new Float64Array(K+1);
@@ -601,6 +617,14 @@ function texts(){
   else{const al=[];for(const[f]of T){if(f>ny+1e-9){const g=analogGain(R.aa,f);if(g>0.01)al.push(`${fmtHz(f)} → ${fmtHz(aliasOf(f,fs))}`+(g<0.99?` (${fmtdB(g)})`:''))}}
     t3+=al.length?`<span class="warn">Aliasing:</span> ${al.join('; ')}.`:`<span class="ok">No aliasing:</span> every tone that gets through is below Fs/2.`;
     if(S.sig!=='pulse'){const hi=Math.max(...T.map(t=>t[0]));t3+=` ${(fs/hi).toFixed(2)} samples per cycle of the highest tone.`}}
+  if(S.quant&&R.qz){const z=R.qz,a=z.a;
+    $('#sQi').innerHTML=`Using tab 1: ±${a.ref} V, ${a.N} bits${a.g!==1?`, gain ×${a.g}`:''}${a.dither?', dither':''}. LSB = ${(z.lsb).toPrecision(3)} V.`;
+    t3+=`<br><b>Quantised:</b> SQNR of these samples ${isFinite(z.sqnr)?z.sqnr.toFixed(1)+' dB':'∞'}. `;
+    if(z.clip)t3+=`<span class="warn">${z.clip} of ${z.n} samples clipped.</span> Clipping bends the waveform, which creates new lines in the spectrum that were never in the input. `;
+    else t3+=`Switch Magnitude to dB to see the quantisation noise floor. The tones hardly change: quantisation adds noise, it doesn't change their levels. `;
+    t3+=`The noise is spread from 0 to Fs/2, so sampling faster spreads the same noise more thinly; you'll meet this as oversampling in DSP 402.`;
+    if(!a.dither&&!z.clip)t3+=` Because the tones and Fs are whole numbers, the error repeats every second, so the floor is made of many tiny lines. Tick dither in tab 1 to smooth it.`}
+  else $('#sQi').innerHTML='';
   $('#iS').innerHTML=t3;
   // 4
   $('#iZ').innerHTML=`Holding each sample for T = 1/Fs = <b>${(1000/fs).toFixed(1)} ms</b> multiplies the spectrum by |sinc(f/Fs)|: <b>${fmtdB(sinc(0.5))}</b> (×0.637) at Fs/2, zero at every multiple of Fs. The copies are reduced, not removed. The hold also delays the signal by T/2 = ${(500/fs).toFixed(1)} ms.`;
@@ -625,14 +649,14 @@ function texts(){
 
 /* ================= wiring ================= */
 let pending=0,needCompute=true;
-function schedule(full){if(full)needCompute=true;if(pending)return;pending=requestAnimationFrame(()=>{pending=0;if(needCompute){compute();needCompute=false}texts();draw()})}
+function schedule(full){if(full)needCompute=true;if(pending)return;pending=requestAnimationFrame(()=>{pending=0;if(S.quant&&R.qKey!==adcKey())needCompute=true;if(needCompute){compute();needCompute=false}texts();draw()})}
 function bindRange(id,key,full=true){const el=$('#'+id);el.value=S[key];el.addEventListener('input',()=>{S[key]=+el.value;schedule(full)})}
 function bindCheck(id,key,full=true){const el=$('#'+id);el.checked=S[key];el.addEventListener('change',()=>{S[key]=el.checked;schedule(full)})}
 function bindSelect(id,key){const el=$('#'+id);el.value=S[key];el.addEventListener('change',()=>{S[key]=el.value;schedule(true)})}
 bindRange('gF','fmax');bindRange('gT','tw',false);bindCheck('gMarks','marks',false);
 bindSelect('sig','sig');bindRange('base','base');bindCheck('rogue','rogue');bindRange('rf','rf');
 bindSelect('aaT','aaT');bindRange('aaF','aaF');bindRange('aaN','aaN');
-bindRange('fs','fs');bindCheck('zEnv','zEnv',false);
+bindRange('fs','fs');bindCheck('sQuant','quant');bindCheck('zEnv','zEnv',false);
 bindSelect('rT','rT');bindCheck('rLock','rLock');bindRange('rF','rF');bindRange('rN','rN');bindCheck('rComp','rComp');
 $('#sig').addEventListener('change',()=>{if(S.sig==='pulse'&&S.tw<0.5){S.tw=0.5;$('#gT').value=0.5}});
 $('#gOne').onclick=()=>{S.two=false;schedule(false)};$('#gTwo').onclick=()=>{S.two=true;schedule(false)};
@@ -655,11 +679,13 @@ schedule(true);
 "use strict";
 const $=s=>document.querySelector(s);
 const S={view:'q',big:false,
-  qSig:'multi',qGain:1,qF:10,qRef:5,qBits:3,qFs:1000,qConv:'std',qDither:false,qZoom:0.1,qShO:true,qShS:true,qShH:true,qShQ:true,qLsb:false,
+  qSig:'multi',qBase:5,qGain:1,qF:10,qRef:5,qBits:3,qFs:40,qConv:'std',qDither:false,qZoom:0.5,qShO:true,qShS:true,qShH:true,qShQ:true,qLsb:false,
   aF:9,aFs:100,aZoom:0.4,aShO:true,aShS:true,aShR:true};
 
 /* ---------- signals ---------- */
-function multi(t){const P=2*Math.PI;return 0.3*Math.sin(P*10*t)+0.5*Math.cos(P*4*t)+0.4*Math.sin(P*20*t)+0.2*Math.cos(P*24*t)+0.14*Math.sin(P*40*t)+0.12*Math.cos(P*34*t)+0.3*Math.sin(P*100*t)+0.7*Math.cos(P*64*t)}
+/* the same five tones as tab 3: lowest tone + 0, 1, 4, 8 and 11 Hz */
+const MOFF=[0,1,4,8,11],MAMP=[2,1,1.9,1.8,1.9],MPEAK=8.6;
+function multi(t){const P=2*Math.PI;let v=0;for(let i=0;i<5;i++)v+=MAMP[i]*Math.cos(P*(S.qBase+MOFF[i])*t);return v}
 function qsig(t){return S.qSig==='multi'?S.qGain*multi(t):S.qGain*Math.sin(2*Math.PI*S.qF*t)}
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 
@@ -677,15 +703,19 @@ function runADC(xs,N,dither){
 
 const R={};
 function computeQ(){
-  const fs=S.qFs,n=Math.round(1*fs);const xs=new Float64Array(n);
-  for(let i=0;i<n;i++)xs[i]=qsig(i/fs);
-  const A=runADC(xs,S.qBits,S.qDither);const e=new Float64Array(n);let ps=0,pe=0,clip=0,emax=0,em=0;
-  for(let i=0;i<n;i++){e[i]=xs[i]-A.qv[i];ps+=xs[i]*xs[i];pe+=e[i]*e[i];em+=e[i];emax=Math.max(emax,Math.abs(e[i]));if(xs[i]>S.qRef||xs[i]<-S.qRef)clip++}
+  const fs=S.qFs;
+  /* display record: the first 2 s, sampled plainly at n/Fs */
+  const nd=Math.ceil(2*fs)+1,xs=new Float64Array(nd);for(let i=0;i<nd;i++)xs[i]=qsig(i/fs);
+  const A=runADC(xs,S.qBits,S.qDither),e=new Float64Array(nd);for(let i=0;i<nd;i++)e[i]=xs[i]-A.qv[i];
+  /* statistics record: 20000 samples. With whole-number tones and Fs the samples repeat every second,
+     so each second starts at a different sampling phase; the statistics then describe the signal, not 40 repeated values. */
+  const n=20000,xl=new Float64Array(n);for(let i=0;i<n;i++){const j=Math.floor(i/fs),ph=(j*0.6180339887)%1;xl[i]=qsig((i+ph)/fs)}
+  const AL=runADC(xl,S.qBits,S.qDither),el=new Float64Array(n);let ps=0,pe=0,clip=0,emax=0,em=0;
+  for(let i=0;i<n;i++){el[i]=xl[i]-AL.qv[i];ps+=xl[i]*xl[i];pe+=el[i]*el[i];em+=el[i];emax=Math.max(emax,Math.abs(el[i]));if(xl[i]>S.qRef||xl[i]<-S.qRef)clip++}
   ps/=n;pe/=n;em/=n;
-  R.q={xs,e,A,ps,pe,em,sd:Math.sqrt(Math.max(0,pe-em*em)),clip,emax,n,
+  R.q={xs,e,A,n:nd,eS:el,nS:n,ps,pe,em,sd:Math.sqrt(Math.max(0,pe-em*em)),clip,emax,
     sqnr:pe>0?10*Math.log10(ps/pe):Infinity};
-  // SQNR for every bit depth
-  R.q.byN=[];for(let N=1;N<=16;N++){const B=runADC(xs,N,S.qDither);let pn=0;for(let i=0;i<n;i++){const d=xs[i]-B.qv[i];pn+=d*d}pn/=n;
+  R.q.byN=[];for(let N=1;N<=16;N++){const B=runADC(xl,N,S.qDither);let pn=0;for(let i=0;i<n;i++){const d=xl[i]-B.qv[i];pn+=d*d}pn/=n;
     R.q.byN.push([N,pn>0?10*Math.log10(ps/pn):NaN,10*Math.log10(ps/(B.q.lsb*B.q.lsb/12))])}
 }
 
@@ -738,7 +768,7 @@ function fmtV(v){const a=Math.abs(v);return(a>=1?v.toFixed(3):a>=0.01?v.toFixed(
 function stat(k,v,warn){return `<div class="stat${warn?' warn':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`}
 function drawQ(){
   const Q=R.q,q=Q.A.q,fs=S.qFs,lsb=q.lsb;
-  const peak=S.qSig==='multi'?S.qGain*2.66:S.qGain;
+  const peak=S.qSig==='multi'?S.qGain*MPEAK:S.qGain;
   const yl=1.12*Math.max(S.qRef,Math.min(peak,S.qRef*2));
   // signal plot
   const ser=[];
@@ -760,14 +790,14 @@ function drawQ(){
     series:[{kind:'step',x0:0,dx:1/fs,ys:eys,color:TK.out,w:1.4},{kind:'dots',x0:0,dx:1/fs,ys:eys,color:TK.out,r:2.2}],
     hl:[{y:0.5*lsb*k,color:TK.muted},{y:-0.5*lsb*k,color:TK.muted}]});
   // histogram over the full record
-  let hmax=0.75*lsb;for(let i=0;i<Q.n;i++)hmax=Math.max(hmax,Math.abs(Q.e[i]));hmax=Math.min(hmax,8*lsb)*1.02;
+  let hmax=0.75*lsb;for(let i=0;i<Q.nS;i++)hmax=Math.max(hmax,Math.abs(Q.eS[i]));hmax=Math.min(hmax,8*lsb)*1.02;
   const nb=31,bw=2*hmax/nb,cnt=new Float64Array(nb);let out=0;
-  for(let i=0;i<Q.n;i++){const b=Math.floor((Q.e[i]+hmax)/bw);if(b>=0&&b<nb)cnt[b]++;else out++}
-  const unif=Q.n*bw/lsb;let cmax=unif;for(const v of cnt)cmax=Math.max(cmax,v);
+  for(let i=0;i<Q.nS;i++){const b=Math.floor((Q.eS[i]+hmax)/bw);if(b>=0&&b<nb)cnt[b]++;else out++}
+  const unif=Q.nS*bw/lsb;let cmax=unif;for(const v of cnt)cmax=Math.max(cmax,v);
   plot($('#cQH'),{x0:-hmax*k,x1:hmax*k,y0:0,y1:cmax*1.12,xl:'error ('+unit+')',
     series:[{kind:'bars',x0:-hmax*k,dx:bw*k,ys:cnt,color:TK.orange},{kind:'fn',fn:S.qDither?(x=>{const u=Math.abs(x/k)/lsb;return u<1?unif*(1-u):0}):(x=>Math.abs(x/k)<=lsb/2?unif:0),color:TK.navy,dash:[6,4],w:1.6}]});
   $('#qRefK').textContent=S.qDither?'triangle ±1 LSB (with dither)':'uniform ±½ LSB';
-  $('#qHistT').textContent=`${Q.n} samples`+(out?`, ${out} beyond the axis`:'');
+  $('#qHistT').textContent=`${Q.nS} samples`+(out?`, ${out} beyond the axis`:'');
   // SQNR vs bits
   const by=Q.byN,mxs=by.map(b=>b[1]).filter(isFinite);const ymax=Math.max(105,...mxs,...by.map(b=>b[2]))+5;const ymin=Math.min(0,...mxs,...by.map(b=>b[2]))-5;
   plot($('#cQN'),{x0:0.5,x1:16.5,y0:ymin,y1:ymax,xl:'bits N  ·  SQNR (dB)',xticks:[1,2,4,6,8,10,12,14,16],
@@ -783,7 +813,7 @@ function drawQ(){
     stat('Max error',`${(Q.emax/lsb).toFixed(2)} <small>LSB</small>`,Q.emax>0.5001*lsb&&!S.qDither)+
     stat('Error σ',`${(Q.sd/lsb).toFixed(3)} <small>LSB · ideal ${S.qDither?'0.408':'0.289'}</small>`)+
     stat('SQNR',isFinite(Q.sqnr)?`${Q.sqnr.toFixed(1)} <small>dB</small>`:'∞')+
-    stat('Clipped',`${(100*Q.clip/Q.n).toFixed(1)}%`,Q.clip>0);
+    stat('Clipped',`${(100*Q.clip/Q.nS).toFixed(1)}%`,Q.clip>0);
   // explanation
   let t='';
   if(Q.clip>0)t+=`<span class="warn">Clipping:</span> ${Q.clip} samples are outside ±${S.qRef} V. Their error is not limited to ±½ LSB, which drags the SQNR down. `;
@@ -835,7 +865,7 @@ function schedule(recomp){if(recomp)dirtyQ=true;if(pend)return;pend=requestAnima
 function labels(){
   $('#qGainL').textContent=S.qSig==='multi'?'Gain':'Peak amplitude';
   $('#qGaino').textContent=S.qSig==='multi'?'×'+S.qGain:S.qGain+' V';$('#qFo').textContent=S.qF+' Hz';$('#qRefo').textContent=S.qRef+' V';
-  $('#qBitso').textContent=S.qBits;$('#qFso').textContent=S.qFs+' Hz';$('#qZoomo').textContent=S.qZoom+' s';$('#qFF').hidden=S.qSig!=='sine';
+  $('#qBaseo').textContent=S.qBase+' Hz';$('#qBaseF').hidden=S.qSig!=='multi';$('#qBitso').textContent=S.qBits;$('#qFso').textContent=S.qFs+' Hz';$('#qZoomo').textContent=S.qZoom+' s';$('#qFF').hidden=S.qSig!=='sine';
   $('#aFo').textContent=S.aF+' Hz';$('#aFso').textContent=S.aFs+' Hz';$('#aZoomo').textContent=S.aZoom+' s';
   $('#tQ').setAttribute('aria-pressed',S.view==='q');$('#tA').setAttribute('aria-pressed',S.view==='a');$('#tS').setAttribute('aria-pressed',S.view==='s');$('#vS').hidden=S.view!=='s';
   $('#vQ').hidden=S.view!=='q';$('#vA').hidden=S.view!=='a';
@@ -843,7 +873,9 @@ function labels(){
 function bind(id,key,num,recomp){const el=$('#'+id);if(el.type==='checkbox'){el.checked=S[key];el.addEventListener('change',()=>{S[key]=el.checked;schedule(recomp)})}
   else{el.value=S[key];el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>{S[key]=num?+el.value:el.value;schedule(recomp)})}}
 bind('qSig','qSig',false,true);bind('qGain','qGain',true,true);bind('qF','qF',true,true);bind('qRef','qRef',true,true);bind('qBits','qBits',true,true);
-bind('qFs','qFs',true,true);bind('qConv','qConv',false,true);bind('qDither','qDither',false,true);bind('qZoom','qZoom',true,false);
+bind('qFs','qFs',true,true);bind('qBase','qBase',true,true);
+/* the lowest tone is shared with tab 3 */
+{const a=$('#qBase'),b=$('#base');if(b){S.qBase=+b.value;a.value=S.qBase;a.addEventListener('input',()=>{b.value=a.value;b.dispatchEvent(new Event('input'))});b.addEventListener('input',()=>{if(+a.value!==+b.value){a.value=b.value;S.qBase=+b.value;schedule(true)}})}}bind('qConv','qConv',false,true);bind('qDither','qDither',false,true);bind('qZoom','qZoom',true,false);
 bind('qShO','qShO',false,false);bind('qShS','qShS',false,false);bind('qShH','qShH',false,false);bind('qShQ','qShQ',false,false);bind('qLsb','qLsb',false,false);
 bind('aF','aF',true,false);bind('aFs','aFs',true,false);bind('aZoom','aZoom',true,false);bind('aShO','aShO',false,false);bind('aShS','aShS',false,false);bind('aShR','aShR',false,false);
 $('#qSig').addEventListener('change',()=>{S.qGain=S.qSig==='multi'?1:4;$('#qGain').value=S.qGain});
