@@ -247,6 +247,7 @@ footer{color:var(--muted);font-size:.8rem}
     <div class="field w180"><label class="lbl" for="gF">Frequency span <output id="gFo"></output></label><input type="range" id="gF" min="40" max="300" step="10" value="120"></div>
     <div class="field w180"><label class="lbl" for="gT">Time window <output id="gTo"></output></label><input type="range" id="gT" min="0.1" max="2" step="0.05" value="0.5"></div>
     <label class="chk"><input type="checkbox" id="gMarks" checked> Nyquist and kFs markers</label>
+    <p class="hint" style="flex-basis:100%;margin:0;font-size:.82rem;color:var(--muted)">Point at (or tap) any spectrum to read a line's exact level.</p>
   </section>
 
   <!-- 1 input -->
@@ -481,6 +482,7 @@ function plot(cv,P){
     c.globalAlpha=1;c.setLineDash([])}
   c.restore();
   c.strokeStyle=TK.line;c.strokeRect(ml+.5,mt+.5,pw,ph);
+  cv._M={X,Y:YL,ml,mt,pw,ph,w,h,c,x0:P.x0,x1:P.x1};
 }
 
 /* spectrum series helpers (one-/two-sided, linear/dB) */
@@ -503,6 +505,35 @@ function markers(level){ // Nyquist and kFs lines
   return v}
 function timeFrame(){return{x0:0,x1:S.tw,y0:R.yt0,y1:R.yt1,xl:'t (s)'}}
 
+/* ---- hover / tap readout on the spectra ---- */
+const HOV={};
+function rrectP(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function hover(cv,arr,stage){
+  const hv=HOV[cv.id],M=cv._M;if(hv===undefined||!M||!arr)return;
+  const px=hv.x,py=hv.y,fsel=M.x0+(px-M.ml)/M.pw*(M.x1-M.x0),sg=fsel<0?-1:1,win=Math.max(2,Math.round(30/M.pw*(M.x1-M.x0)/DF));
+  const fs=S.fs,refIn=REF/(S.two?0.5:1),k0=Math.round(Math.abs(fsel)/DF);
+  // every local peak within ±30 px; pick the one whose top is nearest the pointer in x AND y
+  let kb=-1,best=Infinity;
+  for(let k=Math.max(0,k0-win);k<=Math.min(arr.length-1,k0+win);k++){const a=arr[k];if(a<refIn*(S.db?1e-5:1e-3))continue;
+    if((k>0&&arr[k-1]>a)||(k+1<arr.length&&arr[k+1]>a))continue;
+    const sc=S.two&&k>0?0.5:1,yy=Math.max(M.mt,Math.min(M.mt+M.ph,M.Y(specY(a*sc)))),dx=M.X(sg*k*DF)-px,dy=yy-py,d=dx*dx+dy*dy;
+    if(d<best){best=d;kb=k}}
+  if(kb<0)return;
+  const ab=arr[kb],f=kb*DF,sc=S.two&&kb>0?0.5:1,shown=ab*sc,c=M.c,x=M.X(sg*f),y=M.Y(specY(shown));
+  const fh=Math.round(f*100)/100,near=(a,b)=>Math.abs(a-b)<0.13;
+  const rel=`${fmtdB(ab/refIn)} re largest input tone`;
+  const inA=R.X[kb]||0;let l2;
+  if(stage===1)l2=rel;
+  else if(inA>refIn*1e-3&&(stage===2||f<=fs/2+1e-9))l2=`${fmtdB(ab/inA)} vs its input level`;
+  else{const T=tones();const src=T.find(([ft])=>near(aliasOf(ft,fs),f)&&!near(ft,f));const img=T.find(([ft])=>f>fs/2&&near(aliasOf(f,fs),aliasOf(ft,fs)));
+    if(src&&f<=fs/2)l2=`alias of ${src[0]} Hz · ${rel}`;else if(img)l2=`copy of ${aliasOf(img[0],fs)} Hz · ${rel}`;else l2=rel}
+  const l1=`${fh} Hz: amplitude ${shown<0.01?shown.toExponential(1):shown.toFixed(3)}`;
+  c.save();c.fillStyle=TK.orange;c.strokeStyle=TK.panel;c.lineWidth=2;c.beginPath();c.arc(x,Math.max(M.mt,Math.min(M.mt+M.ph,y)),5,0,6.2832);c.fill();c.stroke();
+  c.font=`600 11px ${TK.mono}`;const w1=c.measureText(l1).width;c.font=`11px ${TK.mono}`;const tw=Math.max(w1,c.measureText(l2).width)+14,th=36;
+  let bx=x+10,by=Math.max(M.mt+2,Math.min(M.mt+M.ph-th-2,y-th-6));if(bx+tw>M.ml+M.pw)bx=x-10-tw;if(bx<2)bx=2;
+  c.globalAlpha=.95;c.fillStyle=TK.panel;rrectP(c,bx,by,tw,th,6);c.fill();c.globalAlpha=1;c.strokeStyle=TK.orange;c.lineWidth=1.2;c.stroke();
+  c.fillStyle=TK.ink;c.textAlign='left';c.textBaseline='top';c.font=`600 11px ${TK.mono}`;c.fillText(l1,bx+7,by+5);c.font=`11px ${TK.mono}`;c.fillStyle=TK.muted;c.fillText(l2,bx+7,by+20);c.restore()}
+
 function draw(){
   tokens();
   const fs=S.fs;
@@ -517,20 +548,20 @@ function draw(){
 
   // 1
   plot($('#cInT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy})]}));
-  plot($('#cInF'),Object.assign(specFrame(),{series:[specSeries(R.X,TK.navy)],vl:markers(0)}));
+  plot($('#cInF'),Object.assign(specFrame(),{series:[specSeries(R.X,TK.navy)],vl:markers(0)}));hover($('#cInF'),R.X,1);
   // 2
   plot($('#cAAT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy,alpha:.3,w:1.2}),Object.assign({},tsx,{ys:R.xa,color:TK.orange,w:1.9})]}));
   const aaS=[specSeries(R.X,TK.navy,{alpha:.3,w:1.2}),specSeries(R.XA,TK.orange)];
   if(!R.aa.none)aaS.push(gainSeries(f=>analogGain(R.aa,f),TK.filter));
-  plot($('#cAAF'),Object.assign(specFrame(),{series:aaS,vl:markers(0)}));
+  plot($('#cAAF'),Object.assign(specFrame(),{series:aaS,vl:markers(0)}));hover($('#cAAF'),R.XA,2);
   // 3
   plot($('#cST'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.xa,color:TK.orange,alpha:.35,w:1.2}),{kind:'stem',x0:0,dx:1/fs,ys:R.xs,color:TK.teal,w:1.4}]}));
-  plot($('#cSF'),Object.assign(specFrame(),{series:[specSeries(R.XS,TK.teal)],vl:markers(1),bands:bandNyq}));
+  plot($('#cSF'),Object.assign(specFrame(),{series:[specSeries(R.XS,TK.teal)],vl:markers(1),bands:bandNyq}));hover($('#cSF'),R.XS,3);
   // 4
   plot($('#cZT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy,alpha:.3,w:1.2}),{kind:'step',x0:0,dx:1/fs,ys:R.xs,color:TK.teal,w:1.8}]}));
   const zS=[specSeries(R.XZ,TK.teal)];
   if(S.zEnv)zS.push(gainSeries(f=>Math.abs(sinc(f/fs)),TK.env,{dash:[6,4],w:1.8}));
-  plot($('#cZF'),Object.assign(specFrame(),{series:zS,vl:markers(1),bands:bandNyq}));
+  plot($('#cZF'),Object.assign(specFrame(),{series:zS,vl:markers(1),bands:bandNyq}));hover($('#cZF'),R.XZ,4);
   // 5
   plot($('#cRT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy,alpha:.8,w:1.2,dash:[5,4]}),Object.assign({},tsx,{ys:R.y,color:TK.out,w:2})]}));
   const rS=[specSeries(R.Y,TK.out)];
@@ -538,7 +569,7 @@ function draw(){
   const rFr=specFrame();
   if(rFr.yr){let gm=0;for(let i=0;i<=400;i++){const f=i/400*S.fmax;gm=Math.max(gm,analogGain(R.rc,f)*(S.rComp?(f<=fs/2?1/sinc(f/fs):Math.PI/2):1))}
     if(gm*1.08>rFr.yr.y1)rFr.yr.y1=gm*1.08}
-  plot($('#cRF'),Object.assign(rFr,{series:rS,vl:markers(1),bands:bandNyq}));
+  plot($('#cRF'),Object.assign(rFr,{series:rS,vl:markers(1),bands:bandNyq}));hover($('#cRF'),R.Y,5);
 }
 
 /* ================= text ================= */
@@ -606,6 +637,12 @@ bindSelect('rT','rT');bindCheck('rLock','rLock');bindRange('rF','rF');bindRange(
 $('#sig').addEventListener('change',()=>{if(S.sig==='pulse'&&S.tw<0.5){S.tw=0.5;$('#gT').value=0.5}});
 $('#gOne').onclick=()=>{S.two=false;schedule(false)};$('#gTwo').onclick=()=>{S.two=true;schedule(false)};
 $('#gLin').onclick=()=>{S.db=false;schedule(false)};$('#gDb').onclick=()=>{S.db=true;schedule(false)};
+['cInF','cAAF','cSF','cZF','cRF'].forEach(id=>{const cv=$('#'+id);cv.style.cursor='crosshair';cv.style.touchAction='pan-y';
+  const set=e=>{const r=cv.getBoundingClientRect();HOV[id]={x:e.clientX-r.left,y:e.clientY-r.top};schedule(false)};
+  cv.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||HOV[id]!==undefined)set(e)});cv.addEventListener('pointerdown',set);
+  cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){delete HOV[id];schedule(false)}})});
+document.addEventListener('pointerdown',e=>{if(!(e.target.id in HOV)&&Object.keys(HOV).length){for(const k in HOV)delete HOV[k];schedule(false)}});
+window.SAMPLINGHOV=HOV;
 const ro=new ResizeObserver(()=>schedule(false));document.querySelectorAll('canvas').forEach(c=>ro.observe(c));
 if(window.matchMedia){const mq=window.matchMedia('(prefers-color-scheme: dark)');(mq.addEventListener?mq.addEventListener('change',()=>schedule(false)):mq.addListener(()=>schedule(false)))}
 new MutationObserver(()=>schedule(false)).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
