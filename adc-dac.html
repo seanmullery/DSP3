@@ -134,6 +134,7 @@ footer{color:var(--muted);font-size:.8rem}
 #vS :focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 #vS{display:flex;flex-direction:column;gap:14px}
 #vS .ctl{position:static}
+body.big #vS canvas{height:290px}
 #vS .ctl h2{font-size:1.08rem}
 </style>
 </head>
@@ -466,25 +467,26 @@ function tokens(){const cs=getComputedStyle(document.documentElement);const g=n=
 function niceStep(r){const p=Math.pow(10,Math.floor(Math.log10(r)));const f=r/p;return(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p}
 function ticks(a,b,n){const st=niceStep((b-a)/n);const t=[];for(let v=Math.ceil(a/st-1e-9)*st;v<=b+1e-9;v+=st)t.push(Math.abs(v)<1e-9?0:+v.toFixed(8));return t}
 function tl(v){const s=String(+v.toFixed(4));return s.replace('-','−')}
+const BIG=()=>document.body.classList.contains('big'),FZ=()=>BIG()?15:11;
 function plot(cv,P){
   const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;
   if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
   const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);
-  const ml=48,mr=P.yr?44:12,mt=12,mb=30,pw=w-ml-mr,ph=h-mt-mb;
+  const ml=BIG()?64:48,mr=P.yr?(BIG()?56:44):12,mt=12,mb=BIG()?38:30,pw=w-ml-mr,ph=h-mt-mb;
   const X=v=>ml+(v-P.x0)/(P.x1-P.x0)*pw,YL=v=>mt+(1-(v-P.y0)/(P.y1-P.y0))*ph;
   const YR=P.yr?(v=>mt+(1-(v-P.yr.y0)/(P.yr.y1-P.yr.y0))*ph):YL;
-  c.font=`11px ${TK.mono}`;c.lineWidth=1;
+  c.font=`${FZ()}px ${TK.mono}`;c.lineWidth=1;
   for(const b of(P.bands||[])){c.fillStyle=TK.band;c.fillRect(X(b[0]),mt,X(b[1])-X(b[0]),ph)}
   // grid
   c.strokeStyle=TK.grid;c.fillStyle=TK.muted;c.textAlign='center';c.textBaseline='top';
-  for(const t of ticks(P.x0,P.x1,Math.max(3,Math.floor(pw/70)))){const xx=Math.round(X(t))+.5;c.beginPath();c.moveTo(xx,mt);c.lineTo(xx,mt+ph);c.stroke();c.fillText(tl(t),xx,mt+ph+5)}
+  for(const t of ticks(P.x0,P.x1,Math.max(3,Math.floor(pw/(BIG()?95:70))))){const xx=Math.round(X(t))+.5;c.beginPath();c.moveTo(xx,mt);c.lineTo(xx,mt+ph);c.stroke();c.fillText(tl(t),xx,mt+ph+5)}
   c.textAlign='right';c.textBaseline='middle';
-  for(const t of ticks(P.y0,P.y1,Math.max(2,Math.floor(ph/38)))){const yy=Math.round(YL(t))+.5;c.strokeStyle=Math.abs(t)<1e-12?TK.muted:TK.grid;c.globalAlpha=Math.abs(t)<1e-12?.6:1;c.beginPath();c.moveTo(ml,yy);c.lineTo(ml+pw,yy);c.stroke();c.globalAlpha=1;c.fillText(tl(t),ml-6,yy)}
-  if(P.yr){c.textAlign='left';c.fillStyle=TK.filter;for(const t of ticks(P.yr.y0,P.yr.y1,Math.max(2,Math.floor(ph/38))))c.fillText(tl(t),ml+pw+6,YR(t))}
+  for(const t of ticks(P.y0,P.y1,Math.max(2,Math.floor(ph/(BIG()?48:38))))){const yy=Math.round(YL(t))+.5;c.strokeStyle=Math.abs(t)<1e-12?TK.muted:TK.grid;c.globalAlpha=Math.abs(t)<1e-12?.6:1;c.beginPath();c.moveTo(ml,yy);c.lineTo(ml+pw,yy);c.stroke();c.globalAlpha=1;c.fillText(tl(t),ml-6,yy)}
+  if(P.yr){c.textAlign='left';c.fillStyle=TK.filter;for(const t of ticks(P.yr.y0,P.yr.y1,Math.max(2,Math.floor(ph/(BIG()?48:38)))))c.fillText(tl(t),ml+pw+6,YR(t))}
   c.textAlign='right';c.textBaseline='bottom';c.fillStyle=TK.muted;c.fillText(P.xl,ml+pw,h-1);
   c.save();c.beginPath();c.rect(ml,mt,pw,ph);c.clip();
   for(const v of(P.vl||[])){c.strokeStyle=v.color;c.globalAlpha=v.alpha||.75;c.setLineDash(v.dash||[4,4]);c.lineWidth=v.w||1.2;const xx=X(v.x);c.beginPath();c.moveTo(xx,mt);c.lineTo(xx,mt+ph);c.stroke();c.setLineDash([]);
-    if(v.label){c.globalAlpha=1;c.fillStyle=v.color;c.textAlign='left';c.textBaseline='top';c.fillText(v.label,xx+3,mt+2+(v.row||0)*13)}c.globalAlpha=1}
+    if(v.label){c.globalAlpha=1;c.fillStyle=v.color;c.textAlign='left';c.textBaseline='top';c.fillText(v.label,xx+3,mt+2+(v.row||0)*(BIG()?18:13))}c.globalAlpha=1}
   for(const s of P.series){
     const Y=s.axis==='r'?YR:YL;c.strokeStyle=s.color;c.fillStyle=s.color;c.globalAlpha=s.alpha??1;c.lineWidth=s.w||1.6;c.setLineDash(s.dash||[]);
     if(s.kind==='line'){c.beginPath();let first=true;const n=s.ys.length;
@@ -545,10 +547,10 @@ function hover(cv,arr,stage){
     if(src&&f<=fs/2)l2=`alias of ${src[0]} Hz · ${rel}`;else if(img)l2=`copy of ${aliasOf(img[0],fs)} Hz · ${rel}`;else l2=rel}
   const l1=`${fh} Hz: amplitude ${shown<0.01?shown.toExponential(1):shown.toFixed(3)}`;
   c.save();c.fillStyle=TK.orange;c.strokeStyle=TK.panel;c.lineWidth=2;c.beginPath();c.arc(x,Math.max(M.mt,Math.min(M.mt+M.ph,y)),5,0,6.2832);c.fill();c.stroke();
-  c.font=`600 11px ${TK.mono}`;const w1=c.measureText(l1).width;c.font=`11px ${TK.mono}`;const tw=Math.max(w1,c.measureText(l2).width)+14,th=36;
+  c.font=`600 ${FZ()}px ${TK.mono}`;const w1=c.measureText(l1).width;c.font=`${FZ()}px ${TK.mono}`;const tw=Math.max(w1,c.measureText(l2).width)+14,th=BIG()?48:36;
   let bx=x+10,by=Math.max(M.mt+2,Math.min(M.mt+M.ph-th-2,y-th-6));if(bx+tw>M.ml+M.pw)bx=x-10-tw;if(bx<2)bx=2;
   c.globalAlpha=.95;c.fillStyle=TK.panel;rrectP(c,bx,by,tw,th,6);c.fill();c.globalAlpha=1;c.strokeStyle=TK.orange;c.lineWidth=1.2;c.stroke();
-  c.fillStyle=TK.ink;c.textAlign='left';c.textBaseline='top';c.font=`600 11px ${TK.mono}`;c.fillText(l1,bx+7,by+5);c.font=`11px ${TK.mono}`;c.fillStyle=TK.muted;c.fillText(l2,bx+7,by+20);c.restore()}
+  c.fillStyle=TK.ink;c.textAlign='left';c.textBaseline='top';c.font=`600 ${FZ()}px ${TK.mono}`;c.fillText(l1,bx+7,by+5);c.font=`${FZ()}px ${TK.mono}`;c.fillStyle=TK.muted;c.fillText(l2,bx+7,by+(BIG()?26:20));c.restore()}
 
 function draw(){
   tokens();
