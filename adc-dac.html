@@ -248,8 +248,9 @@ body.big #vS canvas{height:290px}
       <div class="seg" role="group"><button id="gLin" aria-pressed="true">Linear</button><button id="gDb" aria-pressed="false">dB</button></div></div>
     <div class="field w180"><label class="lbl" for="gF">Frequency span <output id="gFo"></output></label><input type="range" id="gF" min="40" max="300" step="10" value="120"></div>
     <div class="field w180"><label class="lbl" for="gT">Time window <output id="gTo"></output></label><input type="range" id="gT" min="0.1" max="2" step="0.05" value="0.5"></div>
+    <div class="field w180"><label class="lbl" for="gLim">Limit line <output id="gLimo"></output></label><input type="range" id="gLim" min="10" max="80" step="1" value="40"></div>
     <label class="chk"><input type="checkbox" id="gMarks" checked> Nyquist and kFs markers</label>
-    <p class="hint" style="flex-basis:100%;margin:0;font-size:.82rem;color:var(--muted)">Point at (or tap) any spectrum to read a line's exact level.</p>
+    <p class="hint" style="flex-basis:100%;margin:0;font-size:.82rem;color:var(--muted)">Point at (or tap) any spectrum to read a line's exact level. The red dashed limit line is measured from the largest input tone; it is clearest in dB.</p>
   </section>
 
   <!-- 1 input -->
@@ -398,7 +399,7 @@ function runFilter(d,x){
   return y}
 
 /* ================= state & helpers ================= */
-const S={two:false,db:false,fmax:120,tw:0.5,marks:true,sig:'multi',base:5,rogue:false,rf:30,
+const S={lim:40,two:false,db:false,fmax:120,tw:0.5,marks:true,sig:'multi',base:5,rogue:false,rf:30,
   aaT:'none',aaF:20,aaN:6,fs:40,zEnv:true,rT:'ideal',rLock:true,rF:20,rN:6,rComp:false};
 const R={}; // results
 function sinc(u){if(Math.abs(u)<1e-12)return 1;const a=Math.PI*u;return Math.sin(a)/a}
@@ -526,6 +527,9 @@ function timeFrame(){return{x0:0,x1:S.tw,y0:R.yt0,y1:R.yt1,xl:'t (s)'}}
 /* ---- hover / tap readout on the spectra ---- */
 const HOV={};
 function rrectP(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function limitLine(cv){const M=cv._M;if(!M)return;const lim=S.lim||40,y=M.Y(S.db?-lim:REF*Math.pow(10,-lim/20));
+  if(y<M.mt||y>M.mt+M.ph)return;const c=M.c;c.save();c.strokeStyle=TK.filter;c.lineWidth=1.6;c.setLineDash([8,5]);c.beginPath();c.moveTo(M.ml,y);c.lineTo(M.ml+M.pw,y);c.stroke();c.setLineDash([]);
+  c.font=`600 ${typeof FZ==='function'?FZ():11}px ${TK.mono}`;c.fillStyle=TK.filter;c.textAlign='right';c.textBaseline='bottom';c.fillText(`−${lim} dB limit`,M.ml+M.pw-4,y-3);c.restore()}
 function hover(cv,arr,stage){
   const hv=HOV[cv.id],M=cv._M;if(hv===undefined||!M||!arr)return;
   const px=hv.x,py=hv.y,fsel=M.x0+(px-M.ml)/M.pw*(M.x1-M.x0),sg=fsel<0?-1:1,win=Math.max(2,Math.round(30/M.pw*(M.x1-M.x0)/DF));
@@ -566,20 +570,20 @@ function draw(){
 
   // 1
   plot($('#cInT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy})]}));
-  plot($('#cInF'),Object.assign(specFrame(),{series:[specSeries(R.X,TK.navy)],vl:markers(0)}));hover($('#cInF'),R.X,1);
+  plot($('#cInF'),Object.assign(specFrame(),{series:[specSeries(R.X,TK.navy)],vl:markers(0)}));limitLine($('#cInF'));hover($('#cInF'),R.X,1);
   // 2
   plot($('#cAAT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy,alpha:.3,w:1.2}),Object.assign({},tsx,{ys:R.xa,color:TK.orange,w:1.9})]}));
   const aaS=[specSeries(R.X,TK.navy,{alpha:.3,w:1.2}),specSeries(R.XA,TK.orange)];
   if(!R.aa.none)aaS.push(gainSeries(f=>analogGain(R.aa,f),TK.filter));
-  plot($('#cAAF'),Object.assign(specFrame(),{series:aaS,vl:markers(0)}));hover($('#cAAF'),R.XA,2);
+  plot($('#cAAF'),Object.assign(specFrame(),{series:aaS,vl:markers(0)}));limitLine($('#cAAF'));hover($('#cAAF'),R.XA,2);
   // 3
   plot($('#cST'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.xa,color:TK.orange,alpha:.35,w:1.2}),{kind:'stem',x0:0,dx:1/fs,ys:R.xs,color:TK.teal,w:1.4}]}));
-  plot($('#cSF'),Object.assign(specFrame(),{series:[specSeries(R.XS,TK.teal)],vl:markers(1),bands:bandNyq}));hover($('#cSF'),R.XS,3);
+  plot($('#cSF'),Object.assign(specFrame(),{series:[specSeries(R.XS,TK.teal)],vl:markers(1),bands:bandNyq}));limitLine($('#cSF'));hover($('#cSF'),R.XS,3);
   // 4
   plot($('#cZT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy,alpha:.3,w:1.2}),{kind:'step',x0:0,dx:1/fs,ys:R.xs,color:TK.teal,w:1.8}]}));
   const zS=[specSeries(R.XZ,TK.teal)];
   if(S.zEnv)zS.push(gainSeries(f=>Math.abs(sinc(f/fs)),TK.env,{dash:[6,4],w:1.8}));
-  plot($('#cZF'),Object.assign(specFrame(),{series:zS,vl:markers(1),bands:bandNyq}));hover($('#cZF'),R.XZ,4);
+  plot($('#cZF'),Object.assign(specFrame(),{series:zS,vl:markers(1),bands:bandNyq}));limitLine($('#cZF'));hover($('#cZF'),R.XZ,4);
   // 5
   plot($('#cRT'),Object.assign(timeFrame(),{series:[Object.assign({},tsx,{ys:R.x,color:TK.navy,alpha:.8,w:1.2,dash:[5,4]}),Object.assign({},tsx,{ys:R.y,color:TK.out,w:2})]}));
   const rS=[specSeries(R.Y,TK.out)];
@@ -587,7 +591,7 @@ function draw(){
   const rFr=specFrame();
   if(rFr.yr){let gm=0;for(let i=0;i<=400;i++){const f=i/400*S.fmax;gm=Math.max(gm,analogGain(R.rc,f)*(S.rComp?(f<=fs/2?1/sinc(f/fs):Math.PI/2):1))}
     if(gm*1.08>rFr.yr.y1)rFr.yr.y1=gm*1.08}
-  plot($('#cRF'),Object.assign(rFr,{series:rS,vl:markers(1),bands:bandNyq}));hover($('#cRF'),R.Y,5);
+  plot($('#cRF'),Object.assign(rFr,{series:rS,vl:markers(1),bands:bandNyq}));limitLine($('#cRF'));hover($('#cRF'),R.Y,5);
 }
 
 /* ================= text ================= */
@@ -639,7 +643,7 @@ function texts(){
     t5+=S.rComp?`The 1/sinc boost lifts Fs/2 by ×1.571 (+57%, +3.9 dB) to undo the hold.`:`Without the 1/sinc boost, tones near Fs/2 come out up to 36% low.`}
   $('#iR').innerHTML=t5;
   // outputs
-  $('#gFo').textContent=S.fmax+' Hz';$('#gTo').textContent=S.tw+' s';$('#baseo').textContent=S.base+' Hz';$('#rfo').textContent=S.rf+' Hz';
+  $('#gFo').textContent=S.fmax+' Hz';$('#gLimo').textContent='−'+S.lim+' dB';$('#gTo').textContent=S.tw+' s';$('#baseo').textContent=S.base+' Hz';$('#rfo').textContent=S.rf+' Hz';
   $('#aaFo').textContent=S.aaF+' Hz';$('#aaNo').textContent=S.aaN;$('#fso').textContent=fs+' Hz';
   $('#rFo').textContent=(S.rLock?fs/2:S.rF)+' Hz';$('#rNo').textContent=S.rN;
   $('#fBase').hidden=S.sig==='pulse';$('#fRogue').hidden=!S.rogue;
@@ -655,7 +659,7 @@ function schedule(full){if(full)needCompute=true;if(pending)return;pending=reque
 function bindRange(id,key,full=true){const el=$('#'+id);el.value=S[key];el.addEventListener('input',()=>{S[key]=+el.value;schedule(full)})}
 function bindCheck(id,key,full=true){const el=$('#'+id);el.checked=S[key];el.addEventListener('change',()=>{S[key]=el.checked;schedule(full)})}
 function bindSelect(id,key){const el=$('#'+id);el.value=S[key];el.addEventListener('change',()=>{S[key]=el.value;schedule(true)})}
-bindRange('gF','fmax');bindRange('gT','tw',false);bindCheck('gMarks','marks',false);
+bindRange('gF','fmax');bindRange('gLim','lim',false);bindRange('gT','tw',false);bindCheck('gMarks','marks',false);
 bindSelect('sig','sig');bindRange('base','base');bindCheck('rogue','rogue');bindRange('rf','rf');
 bindSelect('aaT','aaT');bindRange('aaF','aaF');bindRange('aaN','aaN');
 bindRange('fs','fs');bindCheck('sQuant','quant');bindCheck('zEnv','zEnv',false);
