@@ -234,8 +234,8 @@ input[type=range]:disabled{opacity:.4}
   <section class="view" id="v1">
     <div class="card ctl">
       <div class="group"><h2>The signal: 512 samples</h2>
-        <div class="field"><label class="lbl nc" for="aMu">Mean μ <output id="aMuo"></output></label><input type="range" id="aMu" min="-10" max="10" step="0.1"></div>
-        <div class="field"><label class="lbl nc" for="aSd">Standard deviation σ <output id="aSdo"></output></label><input type="range" id="aSd" min="0.1" max="5" step="0.1"></div>
+        <div class="field"><label class="lbl nc" for="aMu">Process mean μ <output id="aMuo"></output></label><input type="range" id="aMu" min="-10" max="10" step="0.1"></div>
+        <div class="field"><label class="lbl nc" for="aSd">Process standard deviation σ <output id="aSdo"></output></label><input type="range" id="aSd" min="0.1" max="5" step="0.1"></div>
         <div class="steprow"><button class="btn" id="aNew">New random signal</button><button class="btn" id="aReset">Reset</button></div>
       </div>
       <div class="group"><h2>Plot</h2>
@@ -294,7 +294,7 @@ input[type=range]:disabled{opacity:.4}
     <div class="plots">
       <div class="card stats" id="cStats"></div>
       <div class="card plot"><div class="ptitle"><b id="cT1">The acquired signal</b><span class="key"><i class="d" style="border-color:var(--warn)"></i>mean of the process</span></div><canvas id="cX" class="mini"></canvas></div>
-      <div class="card plot"><div class="ptitle"><b>The mean of the first n samples</b><span class="key"><i style="background:var(--sig)"></i>sample mean</span><span class="key"><i style="background:var(--band);height:10px"></i>typical error σ/√n</span></div><canvas id="cM" class="mini"></canvas></div>
+      <div class="card plot"><div class="ptitle"><b>The mean of the first n samples</b><span class="key"><i style="background:var(--sig)"></i>measured mean</span><span class="key"><i style="background:var(--band);height:10px"></i>typical error σ/√n</span></div><canvas id="cM" class="mini"></canvas></div>
       <div class="card plot"><div class="ptitle"><b id="cT3">The standard deviation of the first n samples</b><span class="key"><i style="background:var(--sin)"></i>÷ N</span><span class="key"><i style="background:var(--sig)"></i>÷ (N − 1)</span><span class="key"><i class="d" style="border-color:var(--cos)"></i>using the true mean, ÷ N</span><span class="key"><i class="d" style="border-color:var(--soft)"></i>σ√((N − 1)/N)</span></div><canvas id="cS" class="half"></canvas></div>
       <div class="card plot"><div class="ptitle"><b id="cT4">Error: estimate − true σ</b></div><canvas id="cE" class="mini"></canvas></div>
       <p class="info" id="cInfo"></p>
@@ -517,7 +517,7 @@ function draw1(){
   const N=512,z=Z(N,A.seed),x=Array.from(z,v=>A.mu+A.sd*v),S=mstats(x),xs=x.map((_,i)=>i);
   const dev=x.map(v=>v-S.m),V=A.view;
   let ys,lines=[],y0,y1,title,key;
-  if(V==='sig'){ys=x;[y0,y1]=A.lock?[-20,20]:[S.m-4.5*S.sd,S.m+4.5*S.sd];title='The signal x<sub>i</sub>';key=`<span class="key"><i style="background:var(--sin)"></i>mean μ</span><span class="key"><i style="background:var(--band);height:10px"></i>μ ± σ</span>`}
+  if(V==='sig'){ys=x;[y0,y1]=A.lock?[-20,20]:[S.m-4.5*S.sd,S.m+4.5*S.sd];title='The signal x<sub>i</sub>';key=`<span class="key"><i style="background:var(--sin)"></i>measured mean μ</span><span class="key"><i style="background:var(--band);height:10px"></i>μ ± σ</span>`}
   else if(V==='dev'){ys=dev;[y0,y1]=A.lock?[-20,20]:[-4.5*S.sd,4.5*S.sd];title='The deviations from the mean, x<sub>i</sub> − μ';key=`<span class="key"><i style="background:var(--band);height:10px"></i>± σ</span>`}
   else if(V==='abs'){ys=dev.map(Math.abs);[y0,y1]=A.lock?[0,20]:[0,4.5*S.sd];title='The size of each deviation, |x<sub>i</sub> − μ|';key=`<span class="key"><i style="background:var(--sin)"></i>average deviation</span><span class="key"><i class="d" style="border-color:var(--cos)"></i>standard deviation σ</span>`}
   else{ys=dev.map(v=>v*v);[y0,y1]=A.lock?[0,150]:[0,niceUp(Math.max(...dev.map(v=>v*v))*1.05)];title='The power in each deviation, (x<sub>i</sub> − μ)²';key=`<span class="key"><i style="background:var(--sin)"></i>variance σ² (their average, ÷ (N − 1))</span>`}
@@ -529,13 +529,13 @@ function draw1(){
       if(V==='abs'){hline(g,X,Y,0,N-1,S.ad,TK.sin,null,2.5);hline(g,X,Y,0,N-1,S.sd,TK.cos,[7,4],2.5);if(lbl()){tag(g,X(8),Y(S.sd)-4,`σ = ${nf(S.sd,3)}`,TK.cos);tag(g,X(N-1)-6,Y(S.ad)+4,`average deviation = ${nf(S.ad,3)}`,TK.sin,'right','top')}}
       if(V==='sq'){hline(g,X,Y,0,N-1,S.v,TK.sin,null,2.5);if(lbl())tag(g,X(N-1)-6,Y(S.v)-4,`σ² = ${nf(S.v,3)}`,TK.sin,'right')}}});
   const snr=S.m/S.sd;
-  $('#aStats').innerHTML=stat('Mean μ',nf(S.m,3))+stat('Average deviation',nf(S.ad,3))+stat('Standard deviation σ',nf(S.sd,3))+stat('Variance σ²',nf(S.v,3))+stat('rms',nf(S.rms,3))+stat('SNR = μ ÷ σ',Math.abs(S.m)<0.05*S.sd?'— <small>(no steady signal)</small>':nf(snr,2));
+  $('#aStats').innerHTML=stat('Measured mean μ',nf(S.m,3))+stat('Average deviation',nf(S.ad,3))+stat('Measured σ',nf(S.sd,3))+stat('Variance σ²',nf(S.v,3))+stat('rms',nf(S.rms,3))+stat('SNR = μ ÷ σ',Math.abs(S.m)<0.05*S.sd?'— <small>(no steady signal)</small>':nf(snr,2));
   $('#aEq').innerHTML=`μ = ${frac('1','N')} Σ x<sub>i</sub> = ${nf(S.m,3)}&nbsp;&nbsp;&nbsp; σ² = ${frac('1','N − 1')} Σ (x<sub>i</sub> − μ)² = ${nf(S.v,3)}&nbsp;&nbsp;&nbsp; σ = √σ² = ${nf(S.sd,3)}<span class="lt">rms² = ${frac('1','N')} Σ x<sub>i</sub>² = ${nf(S.rms**2,3)} &nbsp;≈&nbsp; μ² + σ² = ${nf(S.m**2,3)} + ${nf(S.v,3)} = ${nf(S.m**2+S.v,3)}: the d.c. power plus the a.c. power</span>`;
   let t;
-  if(V==='sig')t=`The mean is the d.c. level of the signal; the standard deviation measures how far it typically swings about that level (the a.c. part). Move μ and σ separately: <b>μ shifts the whole signal, σ stretches it</b>, and neither changes the shape, because it is the same random sequence each time.`;
+  if(V==='sig')t=`The mean is the d.c. level of the signal; the standard deviation measures how far it typically swings about that level (the a.c. part). Move the process mean and σ separately: <b>the mean shifts the whole signal, σ stretches it</b>, and neither changes the shape, because it is the same random sequence each time.`;
   else if(V==='dev')t=`Subtracting the mean leaves only the fluctuation. Why not just average these deviations? Because the positive and negative ones cancel: their average is always 0, whatever σ is.`;
   else if(V==='abs')t=`Taking the size of each deviation stops the cancelling. The average of these is the <b>average deviation</b> (${nf(S.ad,3)}). It is a perfectly good idea, but it is almost never used, because it doesn't match the physics: noise sources add by <b>power</b>, not by amplitude (slide 15). For Gaussian noise σ comes out about 1.25 times the average deviation.`;
-  else t=`Squaring each deviation gives its power (power ∝ voltage²). The average power, dividing by N − 1, is the <b>variance</b> σ² = ${nf(S.v,3)}, and its square root undoes the squaring to give the <b>standard deviation</b> σ = ${nf(S.sd,3)}, back in volts. The rms value includes the d.c. part as well: set μ to 0 and the rms and σ become the same (slide 18).`;
+  else t=`Squaring each deviation gives its power (power ∝ voltage²). The average power, dividing by N − 1, is the <b>variance</b> σ² = ${nf(S.v,3)}, and its square root undoes the squaring to give the <b>standard deviation</b> σ = ${nf(S.sd,3)}, back in volts. The rms value includes the d.c. part as well: set the process mean to 0 and the rms and σ become the same (slide 18).`;
   if(Math.abs(S.m)>=0.05*S.sd)t+=` With a steady signal under the noise, SNR = μ ÷ σ = ${nf(snr,2)} (slide 20).`;
   $('#aInfo').innerHTML=t}
 
@@ -607,10 +607,10 @@ function draw3(){
   const er=a=>a.map(v=>v===null?null:v-S),em=Cs.view==='many'?0.25*S:S;
   plotG($('#cE'),Object.assign({},xr,{y0:-em,y1:em,lines:[{xs:ns,ys:er(sk),color:TK.cos,w:2.5,dash:[3,3]},{xs:ns,ys:er(sN),color:TK.sin,w:2.2},{xs:ns,ys:er(s1),color:TK.sig,w:2.2}]}));
   const L=N-1,m=R.m[L];
-  $('#cStats').innerHTML=stat('Sample mean',`${nf(m,3)} <small>process: ${P.mu}</small>`)+stat('Typical error σ/√N',`± ${nf(P.sd/Math.sqrt(N),3)}`)+stat('SD ÷ N',nf(R.sN[L],3),'')+stat('SD ÷ (N − 1)',nf(R.s1[L],3))+stat('SD with the true mean',nf(R.sk[L],3))+stat('True σ',P.sd);
+  $('#cStats').innerHTML=stat('Measured mean',`${nf(m,3)} <small>process: ${P.mu}</small>`)+stat('Typical error σ/√N',`± ${nf(P.sd/Math.sqrt(N),3)}`)+stat('SD ÷ N',nf(R.sN[L],3),'')+stat('SD ÷ (N − 1)',nf(R.s1[L],3))+stat('SD with the true mean',nf(R.sk[L],3))+stat('True σ',P.sd);
   let t;
-  if(Cs.view==='one')t=`The process is fixed${g?' (μ = 10, σ = 5)':' (a fair coin: μ = 0.5)'}, but every signal we acquire from it is different: <b>statistical noise</b>. Press <b>Acquire another signal</b> a few times. The sample mean wanders inside the shaded band, whose half-width σ/√N shrinks as N grows (slides 24 and 25). For any single signal the three SD estimates jump about so much that it is hard to see which is best: switch to the average over 2000 signals.`;
-  else{const i=Math.min(N-1,4),r=many(Cs.proc);t=`Averaged over 2000 signals the noise cancels out and the bias shows. Dividing by N is <b>too low on average</b>, sitting on σ√((N − 1)/N), because the sample mean is always closer to its own samples than the true mean is. Dividing by N − 1 pulls the estimate back up: at n = ${i+1} the ÷ N estimate averages ${nf(sN[i],3)} and the ÷ (N − 1) one ${nf(s1[i],3)}, against a true σ of ${S}. (Strictly, N − 1 makes the <i>variance</i> exactly right on average: ${nf(r.v1[i],2)} against σ² = ${nf(S*S,2)}. The square root still leaves σ a little low.) For large N the two agree.`}
+  if(Cs.view==='one')t=`The process is fixed${g?' (μ = 10, σ = 5)':' (a fair coin: μ = 0.5)'}, but every signal we acquire from it is different: <b>statistical noise</b>. Press <b>Acquire another signal</b> a few times. The measured mean wanders inside the shaded band, whose half-width σ/√N shrinks as N grows (slides 24 and 25). For any single signal the three SD estimates jump about so much that it is hard to see which is best: switch to the average over 2000 signals.`;
+  else{const i=Math.min(N-1,4),r=many(Cs.proc);t=`Averaged over 2000 signals the noise cancels out and the bias shows. Dividing by N is <b>too low on average</b>, sitting on σ√((N − 1)/N), because the measured mean is always closer to its own samples than the true mean is. Dividing by N − 1 pulls the estimate back up: at n = ${i+1} the ÷ N estimate averages ${nf(sN[i],3)} and the ÷ (N − 1) one ${nf(s1[i],3)}, against a true σ of ${S}. (Strictly, N − 1 makes the <i>variance</i> exactly right on average: ${nf(r.v1[i],2)} against σ² = ${nf(S*S,2)}. The square root still leaves σ a little low.) For large N the two agree.`}
   $('#cInfo').innerHTML=t}
 
 /* ===================== tab 4: non-stationary ===================== */
