@@ -672,4 +672,21 @@ window.FDLAB={A,B:Bn,C:Cw,D:Dx,redraw:schedule,show,aSolve,bEdges,bParts,dDesign
 })();
 </script>
 
+<script id="sliderFocus">/* Safari on a Mac does not focus a slider when it is clicked, so the arrow keys did nothing.
+   1) focus the slider once the click is over (Safari clears focus on mousedown, so earlier is too soon);
+   2) if it still has no focus, step the last-clicked slider ourselves. Chrome already focuses it, so (2) never runs there. */
+(function(){let last=null;
+const isR=t=>t&&t.matches&&t.matches('input[type=range]');
+document.addEventListener('pointerdown',e=>{last=isR(e.target)?e.target:null},true);
+const foc=e=>{const t=e.target;if(isR(t)&&document.activeElement!==t)t.focus({preventScroll:true})};
+document.addEventListener('pointerup',foc,true);document.addEventListener('click',foc,true);
+document.addEventListener('keydown',e=>{const s=last;if(!s||!s.isConnected||s.disabled||e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey)return;
+  const a=document.activeElement;if(a===s)return;
+  if(a&&a!==document.body&&a.matches&&a.matches('input,textarea,select,[contenteditable],[tabindex]:not([tabindex="-1"])'))return;
+  const k=e.key,lo=+s.min||0,hi=s.max===''?100:+s.max,v0=+s.value;let n;
+  if(k==='ArrowRight'||k==='ArrowUp')n=1;else if(k==='ArrowLeft'||k==='ArrowDown')n=-1;else if(k==='PageUp')n=10;else if(k==='PageDown')n=-10;
+  else if(k==='Home'){s.value=lo}else if(k==='End'){s.value=hi}else return;
+  e.preventDefault();e.stopPropagation();if(n>0)s.stepUp(n);else if(n<0)s.stepDown(-n);
+  if(+s.value!==v0){s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}))}},true);
+})();</script>
 </body></html>
