@@ -180,7 +180,8 @@ body.big #vS canvas{height:290px}
         <div class="field"><label class="lbl" for="qBits">Bits N <output id="qBitso"></output></label><input type="range" id="qBits" min="1" max="16" step="1"></div>
         <div class="field"><label class="lbl" for="qFs">Sampling rate Fs <output id="qFso"></output></label><input type="range" id="qFs" min="10" max="100" step="1"></div>
         <div class="field"><label class="lbl" for="qConv">Level spacing</label>
-          <select id="qConv"><option value="std">Standard: LSB = 2Vref / 2ᴺ</option><option value="nb">Notebook: LSB = 2Vref / (2ᴺ − 1)</option></select></div>
+          <select id="qConv" aria-describedby="qConvF"><option value="std">Datasheet</option><option value="nb">End levels at ±Vref</option></select>
+          <p id="qConvF" style="margin:4px 0 0;font-size:.8rem;color:var(--muted)"></p></div>
         <label class="chk"><input type="checkbox" id="qDither"> Add dither (±½ LSB noise before the quantiser)</label>
       </div>
       <div class="group">
@@ -202,7 +203,7 @@ body.big #vS canvas{height:290px}
         <canvas id="cQS" class="tall"></canvas></div>
       <div class="card plot"><div class="ptitle"><b>Quantisation error</b><span>e[n] = sample − quantised value</span><span class="key"><i class="d" style="border-color:var(--muted)"></i>±½ LSB</span></div><canvas id="cQE"></canvas></div>
       <div class="row2">
-        <div class="card plot"><div class="ptitle"><b>Error histogram</b><span id="qHistT"></span><span class="key"><i class="d" style="border-color:var(--navy)"></i><span id="qRefK">uniform ±½ LSB</span></span></div><canvas id="cQH"></canvas></div>
+        <div class="card plot"><div class="ptitle"><b>Error distribution</b><span id="qHistT"></span><span class="key"><i class="d" style="border-color:var(--navy)"></i><span id="qRefK">uniform ±½ LSB</span></span></div><canvas id="cQH"></canvas></div>
         <div class="card plot"><div class="ptitle"><b>SQNR against bits</b><span class="key"><i class="d" style="border-color:var(--muted)"></i>6.02N + 1.76</span><span class="key"><i style="background:var(--orange)"></i>predicted for this signal</span><span class="key"><i class="dot" style="background:var(--teal)"></i>measured</span></div><canvas id="cQN"></canvas></div>
       </div>
       <p class="info" id="qInfo"></p>
@@ -752,7 +753,7 @@ function plot(cv,P){
   for(const v of(P.hl||[])){c.strokeStyle=v.color;c.globalAlpha=v.alpha??.8;c.setLineDash(v.dash||[5,4]);c.lineWidth=v.w||1.2;const yy=Y(v.y);c.beginPath();c.moveTo(ml,yy);c.lineTo(ml+pw,yy);c.stroke();c.setLineDash([]);c.globalAlpha=1;
     if(v.label){c.fillStyle=v.color;c.textAlign='left';const top=yy<mt+fz+4;c.textBaseline=top?'top':'bottom';c.fillText(v.label,ml+4,top?yy+2:yy-2)}}
   for(const v of(P.vl||[])){c.strokeStyle=v.color;c.globalAlpha=v.alpha??.75;c.setLineDash(v.dash||[4,4]);c.lineWidth=v.w||1.2;const xx=X(v.x);c.beginPath();c.moveTo(xx,mt);c.lineTo(xx,mt+ph);c.stroke();c.setLineDash([]);c.globalAlpha=1;
-    if(v.label){c.fillStyle=v.color;c.textAlign='left';c.textBaseline='top';c.fillText(v.label,xx+3,mt+2)}}
+    if(v.label){c.fillStyle=v.color;const tw=c.measureText(v.label).width;let rt=v.align==='right';if(rt&&xx-4-tw<ml)rt=false;else if(!rt&&xx+4+tw>ml+pw)rt=true;c.textAlign=rt?'right':'left';c.textBaseline='top';c.fillText(v.label,rt?xx-4:xx+4,mt+2)}}
   for(const s of P.series){
     c.strokeStyle=s.color;c.fillStyle=s.color;c.globalAlpha=s.alpha??1;c.lineWidth=s.w||1.6;c.setLineDash(s.dash||[]);
     if(s.kind==='fn'){c.beginPath();let first=true;for(let i=0;i<=pw;i+=1){const x=P.x0+(i/pw)*(P.x1-P.x0);const v=s.fn(x);if(!isFinite(v)){first=true;continue}const yy=Y(v);if(first){c.moveTo(ml+i,yy);first=false}else c.lineTo(ml+i,yy)}c.stroke()}
@@ -770,7 +771,8 @@ function plot(cv,P){
 }
 
 /* ---------- quantisation view ---------- */
-function fmtV(v){const a=Math.abs(v);return(a>=1?v.toFixed(3):a>=0.01?v.toFixed(4):v.toExponential(2)).replace('-','−')+' V'}
+function fmtV(v){const a=Math.abs(v);return(a>=1?v.toFixed(3)+' V':a>=0.1?v.toFixed(4)+' V':(+(v*1e3).toPrecision(4))+' mV').replace('-','−')}
+function fmtmV(v){const a=Math.abs(v);return (a>=1?v.toPrecision(3)+' V':(v*1e3).toPrecision(3)+' mV').replace('-','−')}
 function stat(k,v,warn){return `<div class="stat${warn?' warn':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`}
 function drawQ(){
   const Q=R.q,q=Q.A.q,fs=S.qFs,lsb=q.lsb;
@@ -790,18 +792,24 @@ function drawQ(){
   if(L<=64)for(let c=0;c<L;c++)hl.push({y:q.level(c),color:TK.orange,dash:[1,3],alpha:.35});
   plot($('#cQS'),{x0:0,x1:S.qZoom,y0:-yl,y1:yl,xl:'t (s)',series:ser,hl,yr:lev});
   // error plot
-  const k=S.qLsb?1/lsb:1,unit=S.qLsb?'LSB':'V';const eys=Q.e.map(v=>v*k);
+  const k=S.qLsb?1/lsb:1e3,unit=S.qLsb?'LSB':'mV';const eys=Q.e.map(v=>v*k);
   let emx=0.5*lsb*k;for(let i=0;i<Q.n;i++){const t=i/fs;if(t<=S.qZoom)emx=Math.max(emx,Math.abs(eys[i]))}
   plot($('#cQE'),{x0:0,x1:S.qZoom,y0:-emx*1.15,y1:emx*1.15,xl:'t (s)  ·  error in '+unit,
     series:[{kind:'step',x0:0,dx:1/fs,ys:eys,color:TK.out,w:1.4},{kind:'dots',x0:0,dx:1/fs,ys:eys,color:TK.out,r:2.2}],
     hl:[{y:0.5*lsb*k,color:TK.muted},{y:-0.5*lsb*k,color:TK.muted}]});
   // histogram over the full record
   let hmax=0.75*lsb;for(let i=0;i<Q.nS;i++)hmax=Math.max(hmax,Math.abs(Q.eS[i]));hmax=Math.min(hmax,8*lsb)*1.02;
-  const nb=31,bw=2*hmax/nb,cnt=new Float64Array(nb);let out=0;
-  for(let i=0;i<Q.nS;i++){const b=Math.floor((Q.eS[i]+hmax)/bw);if(b>=0&&b<nb)cnt[b]++;else out++}
-  const unif=Q.nS*bw/lsb;let cmax=unif;for(const v of cnt)cmax=Math.max(cmax,v);
-  plot($('#cQH'),{x0:-hmax*k,x1:hmax*k,y0:0,y1:cmax*1.12,xl:'error ('+unit+')',
+  /* bins are whole fractions of half an LSB, so the edges at ±½ LSB fall on bin edges and the end bars aren't cut in half */
+  const jj=Math.max(1,Math.round(15*lsb/(2*hmax))),bw=lsb/(2*jj),nh=Math.ceil(hmax/bw);hmax=nh*bw;
+  const nb=2*nh,cnt=new Float64Array(nb);let out=0;
+  for(let i=0;i<Q.nS;i++){const b=Math.floor((Q.eS[i]+hmax)/bw+1e-9);if(b>=0&&b<nb)cnt[b]++;else out++}
+  for(let i=0;i<nb;i++)cnt[i]/=Q.nS*bw*k;   // probability density, per unit on the axis
+  const unif=1/(lsb*k);let cmax=S.qDither?unif:unif;for(const v of cnt)cmax=Math.max(cmax,v);
+  const ed=(S.qDither?1:0.5)*lsb,edl=S.qLsb?(S.qDither?'1 LSB':'½ LSB'):fmtmV(ed).replace(' mV','')+' mV';
+  plot($('#cQH'),{x0:-hmax*k,x1:hmax*k,y0:0,y1:cmax*1.18,xl:'error ('+unit+')  ·  density (1/'+unit+')',
+    vl:[{x:-ed*k,color:TK.navy,dash:[2,3],align:'right',label:'−'+edl},{x:ed*k,color:TK.navy,dash:[2,3],label:'+'+edl}],
     series:[{kind:'bars',x0:-hmax*k,dx:bw*k,ys:cnt,color:TK.orange},{kind:'fn',fn:S.qDither?(x=>{const u=Math.abs(x/k)/lsb;return u<1?unif*(1-u):0}):(x=>Math.abs(x/k)<=lsb/2?unif:0),color:TK.navy,dash:[6,4],w:1.6}]});
+  $('#qConvF').textContent=S.qConv==='nb'?'LSB = 2Vref / (2ᴺ − 1). The end levels sit on ±Vref.':'LSB = 2Vref / 2ᴺ. The top level is +Vref − 1 LSB.';
   $('#qRefK').textContent=S.qDither?'triangle ±1 LSB (with dither)':'uniform ±½ LSB';
   $('#qHistT').textContent=`${Q.nS} samples`+(out?`, ${out} beyond the axis`:'');
   // SQNR vs bits
@@ -816,8 +824,8 @@ function drawQ(){
   $('#qStats').innerHTML=
     stat('Levels',`${L} <small>(${S.qBits} bits)</small>`)+
     stat('LSB',fmtV(lsb))+
-    stat('Max error',`${(Q.emax/lsb).toFixed(2)} <small>LSB</small>`,Q.emax>0.5001*lsb&&!S.qDither)+
-    stat('Error σ',`${(Q.sd/lsb).toFixed(3)} <small>LSB · ideal ${S.qDither?'0.408':'0.289'}</small>`)+
+    stat('Max error',`${(Q.emax/lsb).toFixed(2)} <small>LSB</small><br><small>= ${fmtmV(Q.emax)}</small>`,Q.emax>0.5001*lsb&&!S.qDither)+
+    stat('Error σ',`${(Q.sd/lsb).toFixed(3)} <small>LSB</small><br><small>= ${fmtmV(Q.sd)}<br>ideal ${S.qDither?'0.408':'0.289'} LSB</small>`)+
     stat('SQNR',isFinite(Q.sqnr)?`${Q.sqnr.toFixed(1)} <small>dB</small>`:'∞')+
     stat('Clipped',`${(100*Q.clip/Q.nS).toFixed(1)}%`,Q.clip>0);
   // explanation

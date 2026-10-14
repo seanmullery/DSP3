@@ -568,9 +568,19 @@ function draw2(){
     stat(`Gap between ${f?'32':'64'}-bit numbers near ${nfs(x0,0)}`,nfs(sp,3))+stat('Each step of 0.0000003',lost?'lost completely':3e-7<sp*4?'badly rounded':'kept (nearly exactly)',lost?'warn':3e-7<sp*4?'warn':'ok');
   /* SD curve */
   const C=sdCurve(),ie=Math.round(B.m/0.05);
-  plotG($('#bS'),{x0:0,x1:9,y0:0,y1:3,xl:'mean of the signal',yl:'calculated σ',xticks:[0,1,2,3,4,5,6,7,8,9],xfmt:v=>`10${supU(v)}`,
-    lines:[{xs:C.e,ys:C.f1.map(v=>v===null?null:Math.min(v,3.2)),color:TK.prod,w:2,dash:[6,4]},{xs:C.e,ys:C.f2.map(v=>Math.min(v,3.2)),color:TK.sin,w:2.5},{xs:C.e,ys:C.d,color:TK.sig,w:2.5}],
-    post:(g,X,Y)=>{g.strokeStyle=TK.title2;g.lineWidth=1.5;g.setLineDash([3,3]);g.beginPath();g.moveTo(X(B.m),Y(0));g.lineTo(X(B.m),Y(3));g.stroke();g.setLineDash([])}});
+  /* log scale for σ: the bad estimates run to 10⁵ and beyond, against a true σ of about 1 */
+  const L10=v=>v===null||!(v>0)?null:Math.max(-1.2,Math.log10(v)),top=Math.max(1,Math.ceil(Math.max(...[...C.f1,...C.f2,...C.d].filter(v=>v>0).map(Math.log10))));
+  const series=[[C.f1,TK.prod,'one-pass'],[C.f2,TK.sin,'two-pass'],[C.d,TK.sig,'64-bit']];
+  plotG($('#bS'),{x0:0,x1:9,y0:-1,y1:top,xl:'mean of the signal',yl:'calculated σ (log scale)',xticks:[0,1,2,3,4,5,6,7,8,9],xfmt:v=>`10${supU(v)}`,
+    yticks:Array.from({length:top+2},(_,i)=>i-1),yfmt:v=>v===0?'1':`10${supU(v)}`,
+    lines:[{xs:C.e,ys:C.f1.map(L10),color:TK.prod,w:2,dash:[6,4]},{xs:C.e,ys:C.f2.map(L10),color:TK.sin,w:2.5},{xs:C.e,ys:C.d.map(L10),color:TK.sig,w:2.5}],
+    post:(g,X,Y)=>{const xm=X(B.m);g.strokeStyle=TK.title2;g.lineWidth=1.5;g.setLineDash([3,3]);g.beginPath();g.moveTo(xm,Y(-1));g.lineTo(xm,Y(top));g.stroke();g.setLineDash([]);
+      /* a dot on each curve at the chosen mean, with its value; equal values share one label */
+      const lab=[];for(const[a,col]of series){const v=a[ie],ly=L10(v);if(ly===null)continue;const yy=Y(ly);g.fillStyle=col;g.beginPath();g.arc(xm,yy,4,0,6.2832);g.fill();
+        const s=nf(v,3);const same=lab.find(l=>l.s===s);if(same)same.col=TK.ink;else lab.push({s,y:yy,col})}
+      const fz=big()?15:11,gap=fz+3,left=B.m>6;lab.sort((a,b)=>a.y-b.y);for(let i=1;i<lab.length;i++)if(lab[i].y-lab[i-1].y<gap)lab[i].y=lab[i-1].y+gap;
+      g.font=`600 ${fz}px ${TK.mono}`;g.textAlign=left?'right':'left';g.textBaseline='middle';
+      g.lineJoin='round';g.lineWidth=4;g.strokeStyle=TK.panel;for(const l of lab){const lx=xm+(left?-9:9),ly=l.y-gap*0.55;g.strokeText(l.s,lx,ly);g.fillStyle=l.col;g.fillText(l.s,lx,ly)}}});
   const d=C.d[ie],f2=C.f2[ie],f1=C.f1[ie];
   let t=`${f?'A C float is a 32-bit number with only about 7 significant digits':'Python\'s float is a 64-bit number with about 16 significant digits'}. Near ${nfs(x0,0)} neighbouring ${f?'32':'64'}-bit numbers are ${nfs(sp,3)} apart, so subtracting 0.0000003 ${lost?'<b>changes nothing at all</b>: the answer rounds straight back to where it started, ten to the eight times over':3e-7<sp*4?'is rounded to the nearest available step every single time, and the small errors pile up':'leaves only a tiny rounding error each time'}. `;
   t+=B.st===4&&!f?`This is the slide 19 example: 3×10¹¹ − 30 should be 299 999 999 970, but the loop leaves it at 300 000 000 000. Subtracting 30 in one go works fine. `:'';
