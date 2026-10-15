@@ -401,7 +401,7 @@ window.MM={n:v=>`<mn>${String(v).replace('-','−')}</mn>`,
   /* phase = ±2π f d */
   phase:(sign,d)=>`<math display="inline"><mi>φ</mi><mo>=</mo>${sign<0?'<mo>−</mo>':''}<mn>2</mn><mi>π</mi><mo>&#x2062;</mo><mi>f</mi><mo>·</mo><mn>${d}</mn></math>`,
   /* Δφ = 2π × f × d */
-  shift:(f,d)=>`<math display="inline"><mi>Δ</mi><mi>φ</mi><mo>=</mo><mn>2</mn><mi>π</mi><mo>×</mo><mn>${f}</mn><mo>×</mo><mn>${String(d).replace('-','−')}</mn></math>`};if(!window.CAPF)window.CAPF=new Proxy({},{get:(t,id)=>P=>{window.__CAP[id]=P;if(window.__CAPDONE)window.__CAPDONE(id)}});</script>
+  shift:(f,d,neg)=>`<math display="inline"><mi>Δ</mi><mi>φ</mi><mo>=</mo>${neg?'<mo>−</mo>':''}<mn>2</mn><mi>π</mi><mo>×</mo><mn>${f}</mn><mo>×</mo>${d<0?'<mo>(</mo>':''}<mn>${String(d).replace('-','−')}</mn>${d<0?'<mo>)</mo>':''}</math>`};if(!window.CAPF)window.CAPF=new Proxy({},{get:(t,id)=>P=>{window.__CAP[id]=P;if(window.__CAPDONE)window.__CAPDONE(id)}});</script>
 <script>
 (function(){
 "use strict";
@@ -1108,7 +1108,7 @@ function drawWhy(TK){
   G.plot($('#wcP'),{x0:0,x1:0.5,y0:-ym,y1:ym,xl:'frequency (fraction of Fs)',series:[{ys:ln,x0:0,dx:0.005,color:TK.prod,w:2}],notes:[{x:f,y:pc,t:`${tl(pc)} rad`,color:TK.sin,align:f>0.35?'right':'left',arrow:true}],vl:[{x:f,color:TK.sin,dash:[3,3]}]});
   $('#wFo').textContent=`${tl(f)} (${f>0?tl(1/f)+' samples per cycle':'DC'})`;$('#wDo').textContent=(d>0?'+':'')+d;
   const cyc=f*d;
-  $('#wInfo').innerHTML=`A shift of ${d} sample${Math.abs(d)===1?'':'s'} at this frequency is ${tl(Math.abs(cyc))} of a cycle, so the phase changes by ${MM.shift(tl(f),d)} = <b>${tl(pc)} rad (${tl(pc*180/PI)}°)</b>. `+
+  $('#wInfo').innerHTML=`A shift of ${String(d).replace('-','−')} sample${Math.abs(d)===1?'':'s'} at this frequency is ${tl(Math.abs(cyc))} of a cycle, so the phase changes by ${MM.shift(tl(f),d,sg()<0)} = <b>${tl(pc)} rad (${tl(pc*180/PI)}°)</b>. `+
     (f===0.5?`At half the sampling rate a one-sample shift is half a cycle, π radians or 180° (slide 74b). `:f<=1/16?`At a low frequency a one-sample shift is only a small fraction of a cycle (slide 74a). `:'')+
     `The phase change is <b>proportional to frequency</b>, so a shift of the whole waveform gives a straight line through zero whose slope is set by the shift.`;
 }

@@ -208,6 +208,25 @@ canvas.tap{touch-action:none}
 
 #v2 .ctl,#v4 .ctl{position:static}
 </style>
+<style id="a11yCss">/* accessibility layer */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.a11ytw{margin-top:8px;overflow-x:auto}
+table.a11yt{border-collapse:collapse;min-width:min(100%,30em);font-family:var(--f-mono,monospace);font-size:.85rem;font-variant-numeric:tabular-nums}
+table.a11yt caption{caption-side:top;text-align:left;font-size:.8rem;color:var(--muted);padding-bottom:4px}
+table.a11yt th,table.a11yt td{padding:3px 12px 3px 0;text-align:left;border-bottom:1px solid var(--grid,var(--line))}
+table.a11yt th{font-weight:700;color:var(--ink)}
+canvas:focus-visible{outline:3px solid var(--accent,var(--title2,#E2620A));outline-offset:2px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent,var(--title2,#E2620A));outline-offset:2px}
+/* projector mode: the whole page, not only the plots */
+html:has(body.big){font-size:20px}
+body.big{font-size:19px}
+@media (min-width:901px){body.big .view{grid-template-columns:340px minmax(0,1fr)}}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+
+
+
+
 </head>
 <body>
 
@@ -352,6 +371,20 @@ canvas.tap{touch-action:none}
   <footer>Dr. Seán Mullery · Atlantic Technological University. Gain = k × Π zero distances ÷ Π pole distances. Works offline once downloaded.</footer>
 </div>
 
+<script id="a11yEarly">/* accessibility: catch every plot's data as it is drawn, so it can be described in words and tables */
+window.__CAP=window.__CAP||{};
+if(!window.CAPG)window.CAPG=new Proxy({},{get:(t,id)=>(o)=>{window.__CAP[id]=o;if(window.__CAPDONE)window.__CAPDONE(id)}});
+/* pole-zero plots: describe the poles, zeros and marked points in words */
+window.__zText=function(o){const f=v=>{const a=Math.abs(v)<5e-4?0:v;return String(+a.toFixed(3)).replace('-','−')};
+  const cx=(x,y)=>{const r=Math.hypot(x,y),a=Math.atan2(y,x)*180/Math.PI;return `${f(x)}${Math.abs(y)<5e-4?'':(y<0?' − j':' + j')+f(Math.abs(y))} (distance ${f(r)} from the origin, angle ${f(a)}°)`};
+  const it=o.items||[],P=it.filter(i=>i.k==='p'),Z=it.filter(i=>i.k==='z'),T=it.filter(i=>i.k==='pt');
+  let t=`z-plane with the unit circle. `;
+  t+=P.length?`${P.length} pole${P.length>1?'s':''}: ${P.map(i=>cx(i.x,i.y)).join('; ')}. `:'No poles. ';
+  t+=Z.length?`${Z.length} zero${Z.length>1?'s':''}: ${Z.map(i=>cx(i.x,i.y)).join('; ')}. `:'';
+  if(T.length)t+=T.map(i=>`Point ${i.lab||''} at ${cx(i.x,i.y)}`).join('. ')+'.';
+  return t};
+if(!window.CAPZ)window.CAPZ=new Proxy({},{get:(t,id)=>(o)=>{window.__CAP[id]={a11yText:window.__zText(o)};if(window.__CAPDONE)window.__CAPDONE(id)}});
+</script>
 <script>
 (function(){
 "use strict";
@@ -593,13 +626,13 @@ function draw3(){
   lines.push({xs:F,ys:G.map(tr),color:TK.sig,w:2.4});
   plotG($('#cR'),{x0:0,x1:0.5,y0,y1,xl:'frequency (fraction of fs)',yl:Cw.db?'gain (dB)':'gain',lines});
   $('#cKw').hidden=ideal||win==='rect';$('#cKc').hidden=!(Cw.cmp&&win!=='rect'&&!ideal);
-  const tw=4/M;let rip=null,stop=null;
-  if(h){const pb=F.filter(f=>f<=fc-tw/2),sb=F.filter(f=>f>=fc+tw/2);const g0=firGain(h,0);if(pb.length)rip=Math.max(...pb.map(f=>Math.abs(firGain(h,f)/g0-1)));if(sb.length)stop=db(Math.max(...sb.map(f=>firGain(h,f))))}
+  const tw=4/M,twm={rect:4,hamming:3.3,blackman:5.5}[win]/M||tw;let rip=null,stop=null;
+  if(h){const pb=F.filter(f=>f<=fc-twm/2),sb=F.filter(f=>f>=fc+twm/2);const g0=firGain(h,0);if(pb.length)rip=Math.max(...pb.map(f=>Math.abs(firGain(h,f)/g0-1)));if(sb.length)stop=db(Math.max(...sb.map(f=>firGain(h,f))))}
   $('#cStats').innerHTML=stat('Coefficients',ideal?'∞':M+1)+stat('Transition width ≈ 4/M',ideal?'0':`${nf(tw,3)} <small>fs</small>`)+stat('Passband ripple',rip===null?(ideal?'0':'—'):`${nf(rip*100,2)} <small>%</small>`)+stat('Coefficients add up to (gain at d.c.)',ideal?'1':Cw.norm?`1 <small>after ÷ ${nf(sumRaw,4)}</small>`:nf(sumRaw,4),ideal||Cw.norm?'ok':'warn')+stat('Worst stopband gain',stop===null?(ideal?`${MN}∞ dB`:'—'):sDb(stop),stop!==null&&stop<-50?'ok':'');
   let t;
   if(ideal)t=`<b>(a) and (b):</b> the ideal low-pass filter passes everything below ${nf(fc,3)} fs and nothing above. Its inverse Fourier transform is the sinc, h[i] = sin(2πf<sub>c</sub>i)/(iπ), which runs to ±∞, so no computer can use it as it stands.`;
   else if(win==='rect')t=`<b>(c) and (d):</b> keep only M + 1 = ${M+1} points, centred on the main lobe, and shift them to run from 0 to M. The abrupt ends cause ripple near the cut-off and a poor stopband (${stop!==null?sDb(stop):'—'}). Make M bigger: the transition gets narrower, but the ripple next to the edge stays about the same size. That is the discontinuity at the ends.`;
-  else t=`<b>(e) to (g):</b> multiplying by the ${win==='hamming'?'Hamming':'Blackman'} window tapers the ends to zero. The passband ripple drops to ${rip!==null?nf(rip*100,2)+' %':'—'} and the worst stopband gain to ${stop!==null?sDb(stop):'—'}. The price is a slightly wider transition. Tick "Gain in dB" to see the stopband properly.`;
+  else t=`<b>(e) to (g):</b> multiplying by the ${win==='hamming'?'Hamming':'Blackman'} window tapers the ends to zero. The passband ripple drops to ${rip!==null?nf(rip*100,2)+' %':'—'} and the worst stopband gain to ${stop!==null?sDb(stop):'—'}. The price is a wider transition: about ${win==='hamming'?'3.3':'5.5'}/M for the ${win==='hamming'?'Hamming':'Blackman'} window, so the ripple and stopband are measured outside that. Tick "Gain in dB" to see the stopband properly.`;
   if(!ideal)t+=Cw.norm?` <b>Scaled:</b> every coefficient has been divided by ${nf(sumRaw,4)}, so they now add up to 1 and the gain at d.c. is exactly 1. The samples no longer sit exactly on the ${win==='rect'?'sinc':'dashed curve'}: they have all been ${sumRaw<1?'stretched up':'squashed down'} by the same ${nf(Math.abs(1/sumRaw-1)*100,1)} %.`:` <b>Not scaled:</b> the samples sit exactly on the ${win==='rect'?'sinc':'dashed sinc × window curve'}, but they add up to ${nf(sumRaw,4)}, so the gain at d.c. is ${nf(sumRaw,4)}, not 1: look where the curve starts. Tick “Scale for a gain of 1” to divide every coefficient by ${nf(sumRaw,4)}.`;
   $('#cInfo').innerHTML=t}
 
@@ -618,7 +651,7 @@ function dDesign(win){const{type,fs,N}=Dx,fN=fs/2,r1=Dx.f1/fN,r2=Math.max(Dx.f2,
     if(n===0){c=type==='lp'?r1:type==='hp'?1-r1:type==='bp'?r2-r1:1-(r2-r1);
       wk=type==='lp'?`f<sub>c</sub>/f<sub>N</sub> = ${nf(Dx.f1,2)}/${nf(fN,2)}`:type==='hp'?`1 − f<sub>c</sub>/f<sub>N</sub>`:type==='bp'?`(f<sub>2</sub> − f<sub>1</sub>)/f<sub>N</sub>`:`1 − (f<sub>2</sub> − f<sub>1</sub>)/f<sub>N</sub>`}
     else{c=type==='lp'?s(r1):type==='hp'?-s(r1):type==='bp'?s(r2)-s(r1):s(r1)-s(r2);
-      const one=r=>`sin(${nf(n*r,3)}π)/(${n}π)`;wk=type==='lp'?one(r1):type==='hp'?`${MN}${one(r1)}`:type==='bp'?`${one(r2)} − ${one(r1)}`:`${one(r1)} − ${one(r2)}`}
+      const one=r=>`sin(${nf(n*r,3)}π)/(${String(n).replace('-',MN)}π)`;wk=type==='lp'?one(r1):type==='hp'?`${MN}${one(r1)}`:type==='bp'?`${one(r2)} − ${one(r1)}`:`${one(r1)} − ${one(r2)}`}
     const m=n+half,w=win==='hamming'?0.54-0.46*Math.cos(2*PI*m/(N-1)):1;rows.push({n,m,c:Math.abs(c)<1e-12?0:c,wk,w,cw:c*w})}
   const raw=rows.map(r=>r.cw);
   const fref=type==='lp'||type==='bs'?0:type==='hp'?0.5:((Dx.f1+Dx.f2)/2)/fs;
@@ -672,6 +705,180 @@ window.FDLAB={A,B:Bn,C:Cw,D:Dx,redraw:schedule,show,aSolve,bEdges,bParts,dDesign
 })();
 </script>
 
+<script id="a11yJs">/* ---------- accessibility layer, shared by the DSP labs ----------
+   1. names, roles and keyboard: tabs, button groups, slider values, plot names
+   2. plots for people who can't see them: a description of each plot, its values as a table, and keyboard reading
+   3. fractions read as "a over b"; projector mode enlarges the whole page (CSS)                                   */
+(function(){
+"use strict";
+if(window.__A11Y)return;window.__A11Y=1;
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const txt=el=>(el?el.textContent:'').replace(/\s+/g,' ').trim();
+const MN='−';
+const sig=v=>{if(v===null||v===undefined||!isFinite(v))return'—';const a=Math.abs(v);let s=a!==0&&(a<1e-3||a>=1e5)?v.toExponential(2):String(+(+v).toPrecision(3));return s.replace('-',MN)};
+let uid=0;const idOf=el=>el.id||(el.id='a11y-'+(++uid));
+
+/* ---------- live region ---------- */
+const live=document.createElement('div');live.id='a11yLive';live.className='sr-only';live.setAttribute('aria-live','polite');live.setAttribute('aria-atomic','true');document.body.appendChild(live);
+const say=t=>{live.textContent='';setTimeout(()=>{live.textContent=t},40)};
+const wrap=$('.wrap');if(wrap&&!wrap.getAttribute('role')&&!$('main'))wrap.setAttribute('role','main');
+
+/* ---------- 1a. tabs ---------- */
+(function(){
+  let tl=$('#tabs')||$('[role="tablist"]');if(!tl)return;
+  const tabs=[...tl.querySelectorAll('button')];if(!tabs.length)return;
+  tl.setAttribute('role','tablist');if(!tl.getAttribute('aria-label')){const h=$('h1');tl.setAttribute('aria-label','Sections of the '+(txt(h)||'lab'))}
+  tabs.forEach(b=>{b.setAttribute('role','tab');idOf(b);
+    let p=null;const v=b.dataset.v;if(v)p=document.getElementById('v'+v);
+    if(!p&&b.getAttribute('aria-controls'))p=document.getElementById(b.getAttribute('aria-controls'));
+    if(p){b.setAttribute('aria-controls',p.id);p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby',b.id)}});
+  const on=b=>b.getAttribute('aria-pressed')==='true'||b.getAttribute('aria-selected')==='true'||b.classList.contains('on')||b.classList.contains('active');
+  function sync(){let any=false;tabs.forEach(b=>{const o=b.getAttribute('aria-pressed')!==null?b.getAttribute('aria-pressed')==='true':on(b);if(o)any=true;b.setAttribute('aria-selected',String(o));b.tabIndex=o?0:-1});if(!any&&tabs[0])tabs[0].tabIndex=0}
+  new MutationObserver(sync).observe(tl,{attributes:true,subtree:true,attributeFilter:['aria-pressed','class']});sync();
+  tl.addEventListener('keydown',e=>{const i=tabs.indexOf(document.activeElement);if(i<0)return;const n=tabs.length;
+    const j=e.key==='ArrowRight'?(i+1)%n:e.key==='ArrowLeft'?(i-1+n)%n:e.key==='Home'?0:e.key==='End'?n-1:-1;
+    if(j<0)return;e.preventDefault();e.stopPropagation();tabs[j].focus();tabs[j].click()});
+})();
+
+/* ---------- 1b. button groups get a name ---------- */
+function nameGroups(){
+  $$('.seg,.steps').forEach(g=>{if(g.getAttribute('role')==='tablist'||g.id==='tabs')return;if(g.getAttribute('aria-label'))return;
+    g.setAttribute('role','group');
+    const f=g.closest('.field'),l=f&&f.querySelector('.lbl');let name=txt(l);
+    if(!name){const grp=g.closest('.group'),h=grp&&grp.querySelector('h2,h3');name=txt(h)}
+    if(name)g.setAttribute('aria-label',name)});
+  /* buttons that act as choices: make sure each has a pressed state screen readers can report */
+  $$('.seg button,.steps button').forEach(b=>{if(b.closest('[role="tablist"]'))return;if(b.dataset.v!==undefined&&b.getAttribute('aria-pressed')===null)b.setAttribute('aria-pressed','false')});
+}
+nameGroups();
+
+/* ---------- 1c. sliders speak their value with units ---------- */
+function sliders(){
+  $$('input[type=range]').forEach(r=>{if(r.__a11y)return;r.__a11y=1;
+    let lab=r.id&&document.querySelector(`label[for="${r.id}"]`);const fl=!lab&&r.closest('.field')&&r.closest('.field').querySelector('label');
+    if(fl){lab=fl;if(!r.getAttribute('aria-label')){const t=txt(fl).replace(txt(fl.querySelector('output')),'').trim();if(t)r.setAttribute('aria-label',t)}}
+    const o=lab&&lab.querySelector('output');
+    if(lab&&!r.getAttribute('aria-label')&&!lab.textContent.trim()){const t=txt(r.closest('.field'));if(t)r.setAttribute('aria-label',t)}
+    if(!o)return;
+    const upd=()=>{const t=txt(o);if(t)r.setAttribute('aria-valuetext',t);else r.removeAttribute('aria-valuetext')};
+    new MutationObserver(upd).observe(o,{childList:true,characterData:true,subtree:true});upd()});
+}
+sliders();
+
+/* ---------- 1d. plots: a name, a hidden description and a slot for a table ---------- */
+function titleOf(cv){
+  if(cv.dataset.a11yName)return cv.dataset.a11yName;
+  const card=cv.closest('.card,.plot');let n='';
+  const t=card&&card.querySelector('.ptitle b,.ptitle strong,h3');n=txt(t);
+  const prev=cv.previousElementSibling;if(prev&&(prev.classList.contains('subl')||prev.classList.contains('ptitle'))&&prev!==(t&&t.parentElement)&&txt(prev))n+=(n?': ':'')+txt(prev);
+  if(!n){const l=cv.getAttribute('aria-label');if(l)n=l}
+  return n||'Plot'}
+const PLOTS=[];
+function setupCanvas(cv){
+  if(cv.__a11y)return;cv.__a11y=1;idOf(cv);PLOTS.push(cv);
+  if(!cv.getAttribute('role'))cv.setAttribute('role','img');
+  const d=document.createElement('p');d.id=cv.id+'-desc';d.className='sr-only';cv.after(d);
+  const tw=document.createElement('div');tw.id=cv.id+'-tbl';tw.className='a11ytw';tw.hidden=true;d.after(tw);
+  const view=cv.closest('.view,section'),info=view&&view.querySelector('.info');if(info)idOf(info);
+  cv.setAttribute('aria-describedby',d.id+(info?' '+info.id:''));
+  nameCanvas(cv);
+  const card=cv.closest('.card');if(card)new MutationObserver(()=>nameCanvas(cv)).observe(card.querySelector('.ptitle')||card,{childList:true,characterData:true,subtree:true});
+}
+function nameCanvas(cv){const n=titleOf(cv);let k='';if(cv.tabIndex>=0)k=' Use the arrow keys to read its values.';const v=n+(/[.?!]$/.test(n)?'':'.')+k;if(cv.getAttribute('aria-label')!==v)cv.setAttribute('aria-label',v)}
+$$('canvas').forEach(setupCanvas);
+
+/* ---------- 2. plot data: normalise every plotting style to a few series of points ---------- */
+function seriesOf(P){
+  const out=[];const x0=P.x0,x1=P.x1;
+  (P.a11y||[]).forEach((A,j)=>{if(A.xs&&A.ys)out.push({pts:A.xs.map((x,i)=>[x,A.ys[i]]).filter(p=>isFinite(p[1])),kind:A.kind||'line',faint:false,right:false,name:A.name,__first:j===0})});if(out.length)return out;
+  const add=(pts,s,kind)=>{const q=pts.filter(p=>p&&p[1]!==null&&p[1]!==undefined&&isFinite(p[1])&&isFinite(p[0])&&p[0]>=Math.min(x0,x1)-1e-9&&p[0]<=Math.max(x0,x1)+1e-9);if(q.length)out.push({pts:q,kind,faint:!!(s.dash||(s.alpha!=null&&s.alpha<0.9)),right:!!s.right})};
+  for(const L of (P.lines||[]))add(L.xs.map((x,i)=>[x,L.ys[i]]),L,'line');
+  for(const S of (P.stems||[]))add(S.xs.map((x,i)=>[x,S.ys[i]]),S,'stem');
+  for(const s of (P.series||[])){
+    if(s.kind==='fn'&&s.fn){const n=200,pts=[];for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n;let y;try{y=s.fn(x)}catch(e){y=NaN}pts.push([x,y])}add(pts,s,'line')}
+    else if(s.kind==='xy'&&s.xs)add(s.xs.map((x,i)=>[x,s.ys[i]]),s,'line');
+    else if(s.kind==='pts'&&s.pts)add(s.pts.map(p=>[p[0],p[1]]),s,'stem');
+    else if(s.ys&&s.dx!==undefined){const pts=[];for(let i=0;i<s.ys.length;i++){const xv=(s.x0||0)+i*s.dx;if(s.mask&&!s.mask[i])continue;pts.push([s.kind==='bars'?xv+s.dx/2:xv,s.ys[i]])}add(pts,s,s.kind==='stem'||s.kind==='dots'||s.kind==='bars'?'stem':'line')}
+    else if(s.ys&&s.xs)add(s.xs.map((x,i)=>[x,s.ys[i]]),s,'line');}
+  return out}
+function mainOf(S){if(S[0]&&S[0].__first)return S[0];let best=null;for(const s of S){if(s.faint||s.right)continue;if(!best||s.pts.length>best.pts.length||(s.pts.length===best.pts.length&&s.kind==='stem'&&best.kind!=='stem'))best=s}return best||S[0]}
+const isSpec=(P,cv)=>(/frequency|hz\b|\(hz\)|cycles per|^k\b|^ω|\bω\b/i.test(P.xl||'')||/spectrum/i.test(titleOf(cv)))&&!/phase|\bt \(|time/i.test(titleOf(cv)+' '+(P.yl||'')+' '+(P.xl||''));
+function unitX(P){const m=(P.xl||'').match(/\(([^)]*)\)/);return m&&m[1].length<16?m[1]:''}
+function peaks(pts){if(pts.length<3)return pts.slice();let mx=-Infinity,mn=Infinity;for(const p of pts){mx=Math.max(mx,p[1]);mn=Math.min(mn,p[1])}
+  const srt=pts.map(p=>p[1]).sort((a,b)=>a-b),med=srt[srt.length>>1],floor=mn>=0?Math.max(mx*0.05,med*1.4):-Infinity,o=[];
+  for(let j=0;j<pts.length;j++){const y=pts[j][1],l=j?pts[j-1][1]:-Infinity,r=j<pts.length-1?pts[j+1][1]:-Infinity;if(y>=l&&y>=r&&y>floor&&(y>l||y>r))o.push(pts[j])}return o}
+function readPts(P,cv,s){
+  if(!s)return[];
+  if(s.kind==='stem'&&s.pts.length<=72)return s.pts;
+  if(isSpec(P,cv)){const pk=peaks(s.pts);if(pk.length>=2||s.kind==='stem')return pk.sort((a,b)=>b[1]-a[1]).slice(0,12).sort((a,b)=>a[0]-b[0])}
+  const n=Math.min(16,s.pts.length),o=[];for(let i=0;i<n;i++)o.push(s.pts[Math.round(i*(s.pts.length-1)/Math.max(1,n-1))]);return o}
+function describe(cv,P){
+  const t=titleOf(cv);if(P.a11yText)return t+(/[.?!]$/.test(t)?' ':'. ')+P.a11yText;const S=seriesOf(P),s=mainOf(S);if(!s)return t+'. Nothing plotted yet.';
+  let d=`${t}${/[.?!]$/.test(t)?'':'.'} Horizontal axis${P.xl?': '+P.xl:''}, from ${sig(P.x0)} to ${sig(P.x1)}.`;
+  if(S.length>1&&S.every(o=>o.name&&o.kind==='stem'&&o.pts.length<=72)){const sc=Math.max(1e-300,...S.flatMap(o=>o.pts.map(q=>Math.abs(q[1])))),nz=o=>o.pts.filter(q=>Math.abs(q[1])>sc*1e-6);
+    d+=' '+S.map(o=>{const z=nz(o);return `${o.name}: ${!z.length?'zero everywhere':z.length>10?`non-zero at ${z.length} points, largest ${sig(z.reduce((a,b)=>Math.abs(b[1])>Math.abs(a[1])?b:a)[1])}`:'non-zero at '+z.map(q=>`${sig(q[0])} (${sig(q[1])})`).join(', ')}`}).join('. ')+'.'}
+  else if(isSpec(P,cv)&&(s.kind==='stem'||peaks(s.pts).length>=2)){const pk=peaks(s.pts).sort((a,b)=>b[1]-a[1]).slice(0,5),u=unitX(P);
+    d+=pk.length?` Largest peaks: ${pk.map(p=>`${sig(p[0])}${u?' '+u:''} (height ${sig(p[1])})`).join(', ')}.`:' No clear peaks.'}
+  else if(s.kind==='stem'&&s.pts.length<=24){const sc=Math.max(1e-300,...s.pts.map(q=>Math.abs(q[1])));d+=` Values: ${s.pts.map(p=>`${sig(p[0])}: ${sig(Math.abs(p[1])<sc*1e-9?0:p[1])}`).join('; ')}.`}
+  else if(S.every(o=>o.pts.every(q=>Math.abs(q[1])<1e-9)))d+=' All values are 0.';
+  else{let mn=Infinity,mx=-Infinity,xa=0,xb=0;for(const p of s.pts){if(p[1]<mn){mn=p[1];xa=p[0]}if(p[1]>mx){mx=p[1];xb=p[0]}}
+    d+=` ${S.length>1?S.length+' traces. The main one runs':'Values run'} from ${sig(mn)} (at ${sig(xa)}) to ${sig(mx)} (at ${sig(xb)}).`}
+  if(P.yl)d+=` Vertical axis: ${P.yl}.`;return d}
+function table(cv,P){
+  if(P.a11yText)return `<p class="a11yp">${t2(P.a11yText)}</p>`;
+  const S=seriesOf(P),s=mainOf(S);if(!s)return'';const rows=readPts(P,cv,s);if(!rows.length)return'';
+  /* other series sampled at the same x positions, when they share them */
+  const extra=S.filter(o=>o!==s&&o.pts.length===s.pts.length&&o.pts.every((p,i)=>Math.abs(p[0]-s.pts[i][0])<1e-9)).slice(0,3);
+  const look=(o,x)=>{const p=o.pts.find(q=>Math.abs(q[0]-x)<1e-9);return p?p[1]:null};
+  const sc=Math.max(1e-300,...rows.map(r=>Math.abs(r[1])||0),...extra.flatMap(o=>o.pts.map(q=>Math.abs(q[1])||0))),zz=v=>v!==null&&isFinite(v)&&Math.abs(v)<sc*1e-9?0:v;
+  const u=unitX(P),hx=isSpec(P,cv)&&!(s.kind==='stem'&&s.pts.length<=72)&&(s.kind==='stem'||peaks(s.pts).length>=2)?'Peak at':(P.xl||'x');
+  return `<table class="a11yt"><caption>${t2(titleOf(cv))}</caption><thead><tr><th scope="col">${t2(hx)}${hx==='Peak at'&&u?' ('+u+')':''}</th><th scope="col">${t2(s.name||P.yl||'Value')}</th>${extra.map((o,i)=>`<th scope="col">${t2(o.name||'trace '+(i+2))}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><td>${sig(r[0])}</td><td>${sig(zz(r[1]))}</td>${extra.map(o=>`<td>${sig(zz(look(o,r[0])))}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
+const t2=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const showT=()=>{const c=$('#a11yTbl');return c&&c.checked};
+const CAP=window.__CAP||(window.__CAP={});
+function update(id){const cv=document.getElementById(id);if(!cv)return;if(!cv.__a11y)setupCanvas(cv);const P=CAP[id];if(!P)return;
+  const d=document.getElementById(id+'-desc');if(d){const v=describe(cv,P);if(d.textContent!==v)d.textContent=v}
+  const tw=document.getElementById(id+'-tbl');if(tw){tw.hidden=!showT();if(!tw.hidden)tw.innerHTML=table(cv,P)}
+  if(!cv.__kb&&!P.a11yText){cv.__kb=1;if(cv.tabIndex<0)cv.tabIndex=0;nameCanvas(cv)}}
+const pend={};
+window.__CAPDONE=id=>{if(pend[id])return;pend[id]=setTimeout(()=>{pend[id]=0;update(id)},200)};
+Object.keys(CAP).forEach(id=>window.__CAPDONE(id));
+
+/* the table switch sits next to the projector option */
+(function(){if(!$$('canvas').length)return;const bigL=$('#big')&&$('#big').closest('label');const l=document.createElement('label');l.className='chk';l.innerHTML='<input type="checkbox" id="a11yTbl"> Show plot values as tables';
+  if(bigL)bigL.after(l);else{const t=$('.tabs')||$('header');if(t)t.after(l)}
+  $('#a11yTbl').addEventListener('change',()=>Object.keys(CAP).forEach(update))})();
+
+/* keyboard reading: arrow keys step through the values a plot shows, Page Up jumps to the largest */
+const KI=new WeakMap();
+document.addEventListener('keydown',e=>{const cv=document.activeElement;if(!cv||cv.tagName!=='CANVAS'||!CAP[cv.id])return;
+  if(!['ArrowRight','ArrowLeft','Home','End','PageUp','PageDown'].includes(e.key))return;
+  const P=CAP[cv.id],s=mainOf(seriesOf(P)),pts=readPts(P,cv,s);if(!pts.length)return;
+  let i=KI.has(cv)?KI.get(cv):-1;
+  if(e.key==='ArrowRight')i=Math.min(pts.length-1,i+1);else if(e.key==='ArrowLeft')i=Math.max(0,i<0?0:i-1);else if(e.key==='Home')i=0;else if(e.key==='End')i=pts.length-1;
+  else{let b=0;pts.forEach((p,j)=>{if(Math.abs(p[1])>Math.abs(pts[b][1]))b=j});i=b}
+  e.preventDefault();e.stopPropagation();KI.set(cv,i);const p=pts[i],u=unitX(P);
+  say(`${P.xl?P.xl.replace(/\s*\([^)]*\)/,'')+' ':''}${sig(p[0])}${u?' '+u:''}: ${sig(p[1])}. ${i+1} of ${pts.length}.`)},true);
+document.addEventListener('focusout',e=>{if(e.target&&e.target.tagName==='CANVAS')KI.delete(e.target)});
+
+/* ---------- 3. fractions are read as "a over b" ---------- */
+function fracs(root){(root.querySelectorAll?[...root.querySelectorAll('.frac')]:[]).forEach(f=>{const s=f.children;if(s.length<2)return;
+  const v=`${txt(s[0])} over ${txt(s[1])}`;if(f.getAttribute('aria-label')!==v){f.setAttribute('role','math');f.setAttribute('aria-label',v)}})}
+fracs(document);
+
+/* ---------- announce the explanation once the student stops changing things ---------- */
+let timer=0,last='';const born=performance.now();
+function watchInfo(el){if(el.__a11yw)return;el.__a11yw=1;new MutationObserver(()=>{if(performance.now()-born<2500)return;const v=el.closest('.view');if(v&&v.hidden)return;if(el.offsetParent===null)return;
+  clearTimeout(timer);timer=setTimeout(()=>{const t=txt(el);if(t&&t!==last){last=t;say(t)}},1500)}).observe(el,{childList:true,characterData:true,subtree:true})}
+$$('.info').forEach(watchInfo);
+$$('#tabs button,[role="tab"]').forEach(b=>b.addEventListener('click',()=>{last=''}));
+
+/* ---------- keep up with anything added later ---------- */
+new MutationObserver(ms=>{let c=false,f=false;for(const m of ms)for(const n of m.addedNodes){if(n.nodeType!==1)continue;if(n.tagName==='CANVAS'||n.querySelector&&n.querySelector('canvas'))c=true;if(n.classList&&n.classList.contains('frac')||n.querySelector&&n.querySelector('.frac'))f=true;if(n.classList&&n.classList.contains('info'))watchInfo(n)}
+  if(c)$$('canvas').forEach(setupCanvas);if(f)fracs(document);if(ms.some(m=>[...m.addedNodes].some(n=>n.nodeType===1&&(n.matches&&n.matches('input[type=range]')||n.querySelector&&n.querySelector('input[type=range],.seg,.steps'))))){sliders();nameGroups()}}).observe(document.body,{childList:true,subtree:true});
+setInterval(()=>{sliders();nameGroups()},2000);
+})();
+</script>
 <script id="sliderFocus">/* Safari on a Mac does not focus a slider when it is clicked, so the arrow keys did nothing.
    1) focus the slider once the click is over (Safari clears focus on mousedown, so earlier is too soon);
    2) if it still has no focus, step the last-clicked slider ourselves. Chrome already focuses it, so (2) never runs there. */
