@@ -96,6 +96,8 @@ label.btn.file input{position:absolute;inset:0;opacity:0;cursor:pointer;width:10
 .subl b{color:var(--ink)}
 canvas.half{height:180px}
 body.big canvas.half{height:240px}
+canvas.third{height:110px}
+body.big canvas.third{height:150px}
 .warnt{color:var(--warn)}
 #v2 .ctl,#v3 .ctl,#v4 .ctl{position:static}
 .tctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 16px;align-items:end;margin-bottom:10px}
@@ -286,6 +288,7 @@ body.big{font-size:19px}
       <div class="card stats" id="aStats"></div>
       <div class="card plot"><div class="ptitle"><b id="aT1">The inputs</b><span id="aK1"></span></div><canvas id="aIn" class="half"></canvas></div>
       <div class="card plot"><div class="ptitle"><b id="aT2">The outputs</b><span id="aK2"></span></div><canvas id="aOut" class="half"></canvas></div>
+      <div class="card plot"><div class="ptitle"><b id="aT3">The difference</b><span id="aK3"></span></div><canvas id="aDiff" class="third"></canvas></div>
       <p class="info" id="aInfo"></p>
     </div>
   </section>
@@ -364,7 +367,8 @@ body.big{font-size:19px}
       <div class="card stats" id="dStats"></div>
       <div class="card"><div class="chain" id="dChain"></div></div>
       <div class="card plot"><div class="ptitle"><b>The input</b><span class="key"><i style="background:var(--sig)"></i>x[n]</span></div><canvas id="dIn" class="mini"></canvas></div>
-      <div class="card plot"><div class="ptitle"><b>The two outputs</b><span class="key"><i style="background:var(--sin)"></i>A then B</span><span class="key"><i class="d" style="border-color:var(--cos)"></i>B then A</span><span class="key"><i style="background:var(--warn)"></i>difference</span></div><canvas id="dOut" class="half"></canvas></div>
+      <div class="card plot"><div class="ptitle"><b>The two outputs</b><span class="key"><i style="background:var(--sin)"></i>A then B</span><span class="key"><i class="d" style="border-color:var(--cos)"></i>B then A</span></div><canvas id="dOut" class="half"></canvas></div>
+      <div class="card plot"><div class="ptitle"><b>The difference</b><span class="key"><i style="background:var(--prod)"></i>A then B − B then A</span></div><canvas id="dDiff" class="third"></canvas></div>
       <p class="info" id="dInfo"></p>
     </div>
   </section>
@@ -386,7 +390,7 @@ body.big{font-size:19px}
     </div>
     <div class="plots">
       <div class="card stats" id="eStats"></div>
-      <div class="card plot"><div class="ptitle"><b>The input, split into impulses</b><span class="key"><i style="background:var(--sin)"></i>the newest impulse</span><span class="key"><i style="background:var(--sig)"></i>added already</span><span class="key"><i style="background:var(--muted)"></i>still to come</span></div><canvas id="eIn" class="mini"></canvas></div>
+      <div class="card plot"><div class="ptitle"><b>The input, split into impulses</b><span class="key"><i style="background:var(--sin)"></i>the newest impulse</span><span class="key"><i style="background:var(--sig)"></i>added already</span><span class="key"><i style="background:var(--sig);opacity:.2"></i>still to come</span></div><canvas id="eIn" class="mini"></canvas></div>
       <div class="card plot"><div class="ptitle"><b id="eT2">The newest impulse goes through the system</b><span class="key"><i style="background:var(--sin)"></i>its output</span></div><canvas id="eOne" class="mini"></canvas></div>
       <div class="card plot"><div class="ptitle"><b>Adding up the outputs</b><span class="key"><i style="background:var(--sin)"></i>sum of the outputs so far</span><span class="key"><i class="d" style="border-color:var(--cos)"></i>the whole input sent through directly</span></div><canvas id="eSum" class="half"></canvas></div>
       <p class="info" id="eInfo"></p>
@@ -411,7 +415,7 @@ body.big{font-size:19px}
     </div>
     <div class="plots">
       <div class="card stats" id="fStats"></div>
-      <div class="card plot"><div class="ptitle"><b>Sizes of the 34 sinusoids</b><span class="key"><i style="background:var(--cos)"></i>cosine, a<sub>k</sub></span><span class="key"><i style="background:var(--sin)"></i>sine, b<sub>k</sub></span></div><canvas id="fAmp" class="mini"></canvas></div>
+      <div class="card plot"><div class="ptitle"><b>Sizes of the 34 sinusoids</b><span class="key"><i style="background:var(--cos)"></i>cosine, a<sub>k</sub></span><span class="key"><i style="background:var(--sin)"></i>sine, b<sub>k</sub></span><span class="key"><i style="background:var(--cos);opacity:.2"></i>not yet added</span></div><canvas id="fAmp" class="mini"></canvas></div>
       <div class="card plot"><div class="ptitle"><b id="fT2">The newest pair</b><span class="key"><i style="background:var(--cos)"></i>cosine</span><span class="key"><i style="background:var(--sin)"></i>sine</span></div><canvas id="fOne" class="mini"></canvas></div>
       <div class="card plot"><div class="ptitle"><b id="fT3">Adding up the sinusoids</b><span class="key"><i style="background:var(--sin)"></i>sum so far</span><span class="key"><i class="d" style="border-color:var(--cos)"></i><span id="fK3">the original signal</span></span></div><canvas id="fSum" class="half"></canvas></div>
       <p class="info" id="fInfo"></p>
@@ -440,6 +444,7 @@ if(!window.CAPZ)window.CAPZ=new Proxy({},{get:(t,id)=>(o)=>{window.__CAP[id]={a1
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const big=()=>document.body.classList.contains('big');
 let TK={};
+function fade(h,a=.2){h=h.replace('#','');if(h.length===3)h=[...h].map(x=>x+x).join('');const n=parseInt(h,16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`}
 function tokens(){const cs=getComputedStyle(document.documentElement);const g=n=>cs.getPropertyValue(n).trim();
   TK={cos:g('--cos'),ink:g('--ink'),muted:g('--muted'),grid:g('--grid'),line:g('--line'),panel:g('--panel'),sig:g('--sig'),sin:g('--sin'),soft:g('--soft'),warn:g('--warn'),ok:g('--ok'),prod:g('--prod'),mono:g('--f-mono'),title2:g('--title2'),band:g('--band'),band2:g('--band2'),chip:g('--chip')}}
 const MN='−',PI=Math.PI;
@@ -588,20 +593,23 @@ function draw1(){
   const K=(c,t,d)=>`<span class="key">${d?`<i class="d" style="border-color:${c}"></i>`:`<i style="background:${c}"></i>`}${t}</span>`;
   if(t==='h'){
     sigPlot($('#aIn'),n0,L,[{ys:T.x1,color:TK.sig,stem:true},{ys:T.kx,color:TK.cos,dash:dk}],{fix:LI});
-    sigPlot($('#aOut'),n0,L,[{ys:T.yk,color:TK.sin,stem:true},{ys:T.ky,color:TK.cos,dash:dk},{ys:T.yk.map((v,i)=>v-T.ky[i]),color:TK.warn,w:1.5}],{fix:LO});
+    sigPlot($('#aOut'),n0,L,[{ys:T.yk,color:TK.sin,stem:true},{ys:T.ky,color:TK.cos,dash:dk}],{fix:LO});
+    {const d=T.yk.map((v,i)=>v-T.ky[i]);sigPlot($('#aDiff'),n0,L,[{ys:d,color:TK.prod,w:2.2}],{fix:LO||Math.max(maxAbs(T.yk),maxAbs(T.ky),maxAbs(d))||1});$('#aK3').innerHTML=K(TK.prod,'output for k·x − k × (output for x)');}
     $('#aT1').textContent='The inputs';$('#aK1').innerHTML=K(TK.sig,'x[n]')+K(TK.cos,`k·x[n] with k = ${nf(A.k,1)}`,1);
-    $('#aT2').textContent='The outputs: does k·x give k·y?';$('#aK2').innerHTML=K(TK.sin,'system output for k·x')+K(TK.cos,'k × (output for x)',1)+K(TK.warn,'difference');
+    $('#aT2').textContent='The outputs: does k·x give k·y?';$('#aK2').innerHTML=K(TK.sin,'system output for k·x')+K(TK.cos,'k × (output for x)',1);
   }else if(t==='a'){
     sigPlot($('#aIn'),n0,L,[{ys:T.x1,color:TK.sig,w:1.6},{ys:T.x2,color:TK.prod,w:1.6},{ys:T.sx,color:TK.cos,dash:dk}],{fix:LI});
-    sigPlot($('#aOut'),n0,L,[{ys:T.ys,color:TK.sin,stem:true},{ys:T.sy,color:TK.cos,dash:dk},{ys:T.ys.map((v,i)=>v-T.sy[i]),color:TK.warn,w:1.5}],{fix:LO});
+    sigPlot($('#aOut'),n0,L,[{ys:T.ys,color:TK.sin,stem:true},{ys:T.sy,color:TK.cos,dash:dk}],{fix:LO});
+    {const d=T.ys.map((v,i)=>v-T.sy[i]);sigPlot($('#aDiff'),n0,L,[{ys:d,color:TK.prod,w:2.2}],{fix:LO||Math.max(maxAbs(T.ys),maxAbs(T.sy),maxAbs(d))||1});$('#aK3').innerHTML=K(TK.prod,'output for x₁ + x₂ − (y₁ + y₂)');}
     $('#aT1').textContent='The inputs';$('#aK1').innerHTML=K(TK.sig,'x₁[n]')+K(TK.prod,'x₂[n]')+K(TK.cos,'x₁ + x₂',1);
-    $('#aT2').textContent='The outputs: does x₁ + x₂ give y₁ + y₂?';$('#aK2').innerHTML=K(TK.sin,'system output for x₁ + x₂')+K(TK.cos,'y₁ + y₂',1)+K(TK.warn,'difference');
+    $('#aT2').textContent='The outputs: does x₁ + x₂ give y₁ + y₂?';$('#aK2').innerHTML=K(TK.sin,'system output for x₁ + x₂')+K(TK.cos,'y₁ + y₂',1);
   }else{
     sigPlot($('#aIn'),n0,L,[{ys:T.x1,color:TK.sig,stem:true},{ys:T.xsh,color:TK.cos,dash:dk}],{fix:LI});
-    sigPlot($('#aOut'),n0,L,[{ys:T.ysh,color:TK.sin,stem:true},{ys:T.shy,color:TK.cos,dash:dk},{ys:T.ysh.map((v,i)=>v-T.shy[i]),color:TK.warn,w:1.5}],{fix:LO});
+    sigPlot($('#aOut'),n0,L,[{ys:T.ysh,color:TK.sin,stem:true},{ys:T.shy,color:TK.cos,dash:dk}],{fix:LO});
+    {const d=T.ysh.map((v,i)=>v-T.shy[i]);sigPlot($('#aDiff'),n0,L,[{ys:d,color:TK.prod,w:2.2}],{fix:LO||Math.max(maxAbs(T.ysh),maxAbs(T.shy),maxAbs(d))||1});$('#aK3').innerHTML=K(TK.prod,'output for the shifted input − y[n + s]');}
     const dir=A.s>0?`left by ${A.s}`:A.s<0?`right by ${-A.s}`:'not at all';
     $('#aT1').textContent=`The inputs: x[n + s] moves the signal ${dir}`;$('#aK1').innerHTML=K(TK.sig,'x[n]')+K(TK.cos,`x[n ${A.s<0?'−':'+'} ${Math.abs(A.s)}]`,1);
-    $('#aT2').textContent='The outputs: does shifting the input just shift the output?';$('#aK2').innerHTML=K(TK.sin,'system output for the shifted input')+K(TK.cos,'y[n + s]',1)+K(TK.warn,'difference');
+    $('#aT2').textContent='The outputs: does shifting the input just shift the output?';$('#aK2').innerHTML=K(TK.sin,'system output for the shifted input')+K(TK.cos,'y[n + s]',1);
   }
   const S=SYS[A.sys];let i='';
   const r=t==='h'?T.H:t==='a'?T.Ad:T.S,what=t==='h'?'homogeneity':t==='a'?'additivity':'shift invariance';
@@ -743,7 +751,8 @@ function draw4(){
   const ok=same(ab,ba),e=maxDiff(ab,ba);
   let LI=0,LO=0;if(D.lock){const x2=sigArr(D.x,n0,L,2,false),ab2=run(D.b,run(D.a,x2,n0),n0),ba2=run(D.a,run(D.b,x2,n0),n0);LI=maxAbs(W(x2))||1;LO=Math.max(maxAbs(W(ab2)),maxAbs(W(ba2)),maxDiff(W(ab2),W(ba2)))||1}
   sigPlot($('#dIn'),0,64,[{ys:W(x),color:TK.sig,stem:true}],{fix:LI});
-  sigPlot($('#dOut'),0,64,[{ys:W(ab),color:TK.sin,stem:true},{ys:W(ba),color:TK.cos,dash:[6,4]},{ys:W(ab).map((v,i)=>v-W(ba)[i]),color:TK.warn,w:1.5}],{fix:LO});
+  sigPlot($('#dOut'),0,64,[{ys:W(ab),color:TK.sin,stem:true},{ys:W(ba),color:TK.cos,dash:[6,4]}],{fix:LO});
+  {const d=W(ab).map((v,i)=>v-W(ba)[i]);sigPlot($('#dDiff'),0,64,[{ys:d,color:TK.prod,w:2.2}],{fix:LO||Math.max(maxAbs(W(ab)),maxAbs(W(ba)),maxAbs(d))||1})}
   const box=k=>`<span class="sysbox">${sysName(k)}</span>`;
   $('#dChain').innerHTML=`<div>x[n] → ${box(D.a)} → ${box(D.b)} → <b style="color:var(--sin)">output 1</b></div><div>x[n] → ${box(D.b)} → ${box(D.a)} → <b style="color:var(--cos)">output 2</b></div>`;
   const la=SYS[D.a].lin&&SYS[D.a].si,lb=SYS[D.b].lin&&SYS[D.b].si;
@@ -774,7 +783,7 @@ function draw5(){
   let L1=maxAbs(x),L2=maxAbs(direct);const acc=new Float64Array(L);
   for(let m=0;m<32;m++){const c=new Float64Array(L);c[m]=x[m];const y=run(E.sys,c,n0);L1=Math.max(L1,maxAbs(y));for(let i=0;i<L;i++)acc[i]+=y[i];L2=Math.max(L2,maxAbs(acc));
     if(m<E.m){for(let i=0;i<L;i++)sum[i]+=y[i];last=y;lastIn=c}}
-  const cols=Array.from({length:L},(_,i)=>i===E.m-1?TK.sin:i<E.m-1?TK.sig:TK.muted);
+  const cols=Array.from({length:L},(_,i)=>i===E.m-1?TK.sin:i<E.m-1?TK.sig:fade(TK.sig));
   sigPlot($('#eIn'),0,L,[{ys:Array.from(X).map((v,i)=>i<32?v:null),color:TK.sig,stem:true,cols}]);
   if(last){sigPlot($('#eOne'),0,L,[{ys:Array.from(lastIn).map((v,i)=>i===E.m-1?v:null),color:TK.sig,stem:true,r:4},{ys:last,color:TK.sin,stem:true}],{fix:L1});
     $('#eT2').textContent=`Impulse ${E.m-1}: x[${E.m-1}] = ${nf(x[E.m-1],2).replace('-',MN)} at n = ${E.m-1}, and what the system makes of it`}
@@ -816,7 +825,7 @@ function draw6(){
   /* amplitudes */
   const ks=Array.from({length:17},(_,k)=>k),mx=Math.max(...a.map(Math.abs),...b.map(Math.abs))*1.25||1;
   plotG($('#fAmp'),{x0:-0.8,x1:16.8,y0:-mx,y1:mx,xl:'k (cycles per 32 samples)',xaxis:true,xticks:ks,
-    stems:[{xs:ks.map(k=>k-0.17),ys:Array.from(a),color:TK.cos,r:3.2,cols:ks.map(k=>k<=F.m?TK.cos:TK.muted)},{xs:ks.map(k=>k+0.17),ys:Array.from(b),color:TK.sin,r:3.2,cols:ks.map(k=>k<=F.m?TK.sin:TK.muted)}]});
+    stems:[{xs:ks.map(k=>k-0.17),ys:Array.from(a),color:TK.cos,r:3.2,cols:ks.map(k=>k<=F.m?TK.cos:fade(TK.cos))},{xs:ks.map(k=>k+0.17),ys:Array.from(b),color:TK.sin,r:3.2,cols:ks.map(k=>k<=F.m?TK.sin:fade(TK.sin))}]});
   /* newest pair, drawn as smooth curves through their samples */
   const k=F.m,fine=[];for(let i=0;i<=310;i++)fine.push(i/10);
   if(k>=0){const yc=via(comp(k,1)),ys=via(comp(k,0));
@@ -1048,4 +1057,25 @@ document.addEventListener('keydown',e=>{const s=last;if(!s||!s.isConnected||s.di
   e.preventDefault();e.stopPropagation();if(n>0)s.stepUp(n);else if(n<0)s.stepDown(-n);
   if(+s.value!==v0){s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}))}},true);
 })();</script>
+<script>
+/* Apple Pencil on sliders. iPadOS Scribble treats pencil strokes as handwriting, so the native slider never sees the drag.
+   For pen input only, cancel the default (which stops Scribble) and move the slider here instead. Finger and mouse are untouched. */
+(()=>{const R=t=>t&&t.closest?t.closest('input[type=range]'):null;let act=null;
+const num=(v,d)=>v===''||isNaN(+v)?d:+v;
+function setFrom(r,x){const b=r.getBoundingClientRect();if(!b.width)return;const min=num(r.min,0),max=num(r.max,100),st=r.step==='any'?0:num(r.step,1);
+  const th=Math.min(b.height,22)/2;let f=(x-b.left-th)/Math.max(1,b.width-2*th);f=Math.max(0,Math.min(1,f));
+  let v=min+f*(max-min);if(st>0)v=min+Math.round((v-min)/st)*st;v=Math.max(min,Math.min(max,v));
+  const s=String(+v.toFixed(10));if(r.value!==s){r.value=s;r.dispatchEvent(new Event('input',{bubbles:true}))}}
+document.addEventListener('pointerdown',e=>{if(e.pointerType!=='pen')return;const r=R(e.target);if(!r||r.disabled)return;
+  e.preventDefault();act={r,id:e.pointerId,v:r.value};try{r.setPointerCapture(e.pointerId)}catch(_){}
+  try{r.focus({preventScroll:true})}catch(_){r.focus()}setFrom(r,e.clientX)},{capture:true,passive:false});
+document.addEventListener('pointermove',e=>{if(!act||e.pointerId!==act.id)return;e.preventDefault();setFrom(act.r,e.clientX)},{capture:true,passive:false});
+const end=e=>{if(!act||e.pointerId!==act.id)return;const a=act;act=null;try{a.r.releasePointerCapture(e.pointerId)}catch(_){}
+  if(a.r.value!==a.v)a.r.dispatchEvent(new Event('change',{bubbles:true}))};
+document.addEventListener('pointerup',end,true);document.addEventListener('pointercancel',end,true);
+const stylus=e=>{const t=e.touches&&e.touches[0];return t&&t.touchType==='stylus'};
+document.addEventListener('touchstart',e=>{if(stylus(e)&&R(e.target))e.preventDefault()},{capture:true,passive:false});
+document.addEventListener('touchmove',e=>{if(act&&stylus(e))e.preventDefault()},{capture:true,passive:false});
+})();
+</script>
 </body></html>
