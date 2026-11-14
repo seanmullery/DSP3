@@ -1,8 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Convolution Machine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -170,8 +166,6 @@ body.big{font-size:19px}
 
 
 
-</head>
-<body>
 
 <div class="wrap">
   <header>
@@ -232,7 +226,7 @@ body.big{font-size:19px}
         <span><i style="background:var(--orange)"></i><span id="lgK">impulse response h[n]</span></span>
         <span><i style="background:var(--teal)"></i>output y[n]</span>
         <span><i style="border:1.5px solid var(--ghost)"></i>padded zero</span>
-        <span>Drag the x[n] dots with a mouse to change the input.</span>
+        <span>Drag the x[n] dots up or down to change the input.</span>
       </div>
     </section>
 
@@ -305,17 +299,17 @@ const RADAR=(function(){const rnd=mulberry32(7);const o=[];for(let n=0;n<64;n++)
 const SMITH_X=[0,-1,-1.3,2,1.4,1.4,0.6,0,-0.7], SMITH_H=[1,-0.5,-0.3,-0.2];
 
 const PRESETS=[
- {id:'smith',name:"Smith's example (slides 20–35)",x:SMITH_X,h:SMITH_H,mode:'conv',note:'<b>9-point input, 4-point impulse response, 9 + 4 − 1 = 12 output samples.</b> The same numbers as the convolution machine figures in the slides.'},
- {id:'delta',name:'Delta function δ[n] (slide 42)',x:SMITH_X,h:[1],mode:'conv',note:'<b>h[n] = δ[n].</b> The output is identical to the input: the system passes every signal unchanged.'},
- {id:'gain',name:'Amplifier 1.5·δ[n] (slide 44)',x:SMITH_X,h:[1.5],mode:'conv',note:'<b>h[n] = 1.5δ[n].</b> A scaled delta function makes an amplifier. Try 0.5 in the h[n] box for an attenuator.'},
- {id:'delay',name:'Delay δ[n−3] (slide 45)',x:SMITH_X,h:[0,0,0,1],mode:'conv',note:'<b>h[n] = δ[n−3].</b> A shifted delta function delays the whole signal by 3 samples.'},
- {id:'echo',name:'Echo δ[n] + 0.5δ[n−6] (slide 47)',x:[0,1,2,1,0,0,0,0,0,0,0,0],h:[1,0,0,0,0,0,0.5],mode:'conv',note:'<b>Superposition:</b> the output is the input plus a half-size copy 6 samples later.'},
- {id:'diff',name:'First difference (slides 49–53)',x:SL,h:[1,-1],mode:'conv',note:'<b>h[n] = δ[n] − δ[n−1].</b> Each output is x[n] − x[n−1], the slope of the input. Flat sections give zero.'},
- {id:'rsum',name:'Running sum (slides 49–54)',x:DIFF,h:Array(30).fill(1),mode:'conv',note:'<b>h[n] = 1 for 30 samples</b> (a truncated step). Undoes the first difference: the output rebuilds the piecewise-linear signal.'},
- {id:'lp',name:'Low-pass: 13-point moving average (slides 55–58)',x:RAMP_SINE,h:LP13,mode:'conv',note:'<b>Ramp + sine (period 13).</b> Averaging over exactly one period removes the sine and keeps the slow ramp. The kernel sums to 1, so gain at DC is 1.'},
- {id:'hp',name:'High-pass: δ[n] − low-pass (slides 59–62)',x:RAMP_SINE,h:HP13,mode:'conv',note:'<b>Delta at the centre minus the moving average.</b> The kernel sums to 0, so DC is removed and the sine passes.'},
- {id:'ends',name:'Sine + DC: end effects (slide 38)',x:DC_SINE,h:HP13,mode:'conv',note:'<b>High-pass on a sine sitting on DC 2.</b> The middle is clean; the first and last M − 1 = 12 outputs are a mess because h[n] is not fully immersed.'},
- {id:'radar',name:'Radar: triangle in noise (slides 74–81)',x:RADAR,h:TRI,mode:'corr',note:'<b>Correlation with the target t[n].</b> The noisy echo starts at x[30]. The peak in y[n] lands where the machine window lines up with it (n = 38 here, the window’s right edge).'}
+ {id:'smith',name:"Smith's example (slides 20–24)",x:SMITH_X,h:SMITH_H,mode:'conv',note:'<b>9-point input, 4-point impulse response, 9 + 4 − 1 = 12 output samples.</b> The same numbers as the convolution machine animation on slide 24.'},
+ {id:'delta',name:'Delta function δ[n] (slide 31)',x:SMITH_X,h:[1],mode:'conv',note:'<b>h[n] = δ[n].</b> The output is identical to the input: the system passes every signal unchanged.'},
+ {id:'gain',name:'Amplifier 1.5·δ[n] (slide 33)',x:SMITH_X,h:[1.5],mode:'conv',note:'<b>h[n] = 1.5δ[n].</b> A scaled delta function makes an amplifier. Try 0.5 in the h[n] box for an attenuator.'},
+ {id:'delay',name:'Delay δ[n−3] (slide 34)',x:SMITH_X,h:[0,0,0,1],mode:'conv',note:'<b>h[n] = δ[n−3].</b> A shifted delta function delays the whole signal by 3 samples.'},
+ {id:'echo',name:'Echo δ[n] + 0.5δ[n−6] (slide 36)',x:[0,1,2,1,0,0,0,0,0,0,0,0],h:[1,0,0,0,0,0,0.5],mode:'conv',note:'<b>Superposition:</b> the output is the input plus a half-size copy 6 samples later.'},
+ {id:'diff',name:'First difference (slides 38–42)',x:SL,h:[1,-1],mode:'conv',note:'<b>h[n] = δ[n] − δ[n−1].</b> Each output is x[n] − x[n−1], the slope of the input. Flat sections give zero.'},
+ {id:'rsum',name:'Running sum (slides 38–43)',x:DIFF,h:Array(30).fill(1),mode:'conv',note:'<b>h[n] = 1 for 30 samples</b> (a truncated step). Undoes the first difference: the output rebuilds the piecewise-linear signal.'},
+ {id:'lp',name:'Low-pass: 13-point moving average (slides 44–47)',x:RAMP_SINE,h:LP13,mode:'conv',note:'<b>Ramp + sine (period 13).</b> Averaging over exactly one period removes the sine and keeps the slow ramp. The kernel sums to 1, so gain at DC is 1.'},
+ {id:'hp',name:'High-pass: δ[n] − low-pass (slides 48–51)',x:RAMP_SINE,h:HP13,mode:'conv',note:'<b>Delta at the centre minus the moving average.</b> The kernel sums to 0, so DC is removed and the sine passes.'},
+ {id:'ends',name:'Sine + DC: end effects (slide 27)',x:DC_SINE,h:HP13,mode:'conv',note:'<b>High-pass on a sine sitting on DC 2.</b> The middle is clean; the first and last M − 1 = 12 outputs are a mess because h[n] is not fully immersed.'},
+ {id:'radar',name:'Radar: triangle in noise (slides 63–70)',x:RADAR,h:TRI,mode:'corr',note:'<b>Correlation with the target t[n].</b> The noisy echo starts at x[30]. The peak in y[n] lands where the machine window lines up with it (n = 38 here, the window’s right edge).'}
 ];
 
 /* ---------- state ---------- */
@@ -422,13 +416,15 @@ function drawStage(){
     const part=i=>i<M-1||i>N-1,bands=[];
     for(let i=0;i<L;i++){if(!part(i))continue;let j=i;while(j+1<L&&part(j+1))j++;bands.push([i,j]);i=j}
     for(const[a,b]of bands){const x0=X(a)-cw/2,w=(b-a+1)*cw;o+=`<rect class="edgeband" x="${x0}" y="${RY[0]-6}" width="${w}" height="${RY[1]-RY[0]+12}"/>`;
-      if(w>70)o+=`<text class="edgetxt" x="${x0+w/2}" y="${RY[0]+4}" text-anchor="middle">${kname} not fully immersed</text>`}
+      let lab=kname+' not fully immersed';if(w<lab.length*6.1+6)lab='not immersed';const tw=lab.length*6.1;
+      if(w>=tw*0.75){const cx=Math.max(LM+tw/2+2,Math.min(W-RM-tw/2-2,x0+w/2));o+=`<text class="edgetxt" x="${cx}" y="${RY[0]+4}" text-anchor="middle">${lab}</text>`}}
   }
   const yy=v=>sy(v,S.sy,RY[0],RY[1]),y0=yy(0);
   if(S.view==='output'){
-    const n=S.n,hide=S.quiz&&!S.ans[n];
+    const n=S.n,hide=S.quiz&&!S.ans[n],arriving=S.mpos<n-0.02;
     for(let i=0;i<L;i++){
       if(i<n)o+=stem('ys',X(i),Y[i],S.sy,RY[0],RY[1],r);
+      else if(i===n&&arriving){if(S.ghost&&!S.quiz)o+=`<circle class="ghost" cx="${X(i)}" cy="${yy(Y[i])}" r="${r}"/>`}
       else if(i===n){if(hide){o+=`<text class="qmark" x="${X(i)}" y="${y0-8}" text-anchor="middle">?</text>`}
         else{o+=stem('ys',X(i),Y[i],S.sy,RY[0],RY[1],r)+`<circle class="ring" cx="${X(i)}" cy="${yy(Y[i])}" r="${r+3.5}"/>`}}
       else if(S.ghost&&!S.quiz){o+=`<circle class="ghost" cx="${X(i)}" cy="${yy(Y[i])}" r="${r}"/>`}
@@ -572,6 +568,9 @@ $('#stage').addEventListener('pointerdown',e=>{
   e.preventDefault();stop();S.drag={which:'x',i};$('#stage').setPointerCapture(e.pointerId);dragX(p);
 });
 function dragX(p){const s=S.sx,v=s.lo+(RX[1]-p.y)/(RX[1]-RX[0])*(s.hi-s.lo);S.x[S.drag.i]=snap(Math.max(s.lo,Math.min(s.hi,v)));resetQuiz();markCustom();compute();syncText();render()}
+$('#stage').addEventListener('touchstart',e=>{const t=e.touches[0];if(!t||!S.geo)return;
+  const p=svgPoint($('#stage'),t),g=S.geo;if(p.y<RX[0]-14||p.y>RX[1]+10)return;
+  const i=Math.round((p.x-LM)/g.cw-0.5+g.iMin);if(i>=0&&i<S.x.length)e.preventDefault()},{passive:false});
 $('#stage').addEventListener('pointermove',e=>{if(S.drag&&S.drag.which==='x')dragX(svgPoint($('#stage'),e))});
 $('#hed').addEventListener('pointerdown',e=>{
   const p=svgPoint($('#hed'),e),g=S.hgeo;const j=Math.floor((p.x-g.l)/g.cw);if(j<0||j>=g.M)return;
@@ -611,7 +610,6 @@ document.addEventListener('keydown',e=>{
 loadPreset('smith');
 })();
 </script>
-
 <script id="a11yJs">/* ---------- accessibility layer, shared by the DSP labs ----------
    1. names, roles and keyboard: tabs, button groups, slider values, plot names
    2. plots for people who can't see them: a description of each plot, its values as a table, and keyboard reading
@@ -820,5 +818,25 @@ document.addEventListener('keydown',e=>{const s=last;if(!s||!s.isConnected||s.di
   e.preventDefault();e.stopPropagation();if(n>0)s.stepUp(n);else if(n<0)s.stepDown(-n);
   if(+s.value!==v0){s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}))}},true);
 })();</script>
-</body>
-</html>
+
+<script>
+/* Apple Pencil on sliders. iPadOS Scribble treats pencil strokes as handwriting, so the native slider never sees the drag.
+   For pen input only, cancel the default (which stops Scribble) and move the slider here instead. Finger and mouse are untouched. */
+(()=>{const R=t=>t&&t.closest?t.closest('input[type=range]'):null;let act=null;
+const num=(v,d)=>v===''||isNaN(+v)?d:+v;
+function setFrom(r,x){const b=r.getBoundingClientRect();if(!b.width)return;const min=num(r.min,0),max=num(r.max,100),st=r.step==='any'?0:num(r.step,1);
+  const th=Math.min(b.height,22)/2;let f=(x-b.left-th)/Math.max(1,b.width-2*th);f=Math.max(0,Math.min(1,f));
+  let v=min+f*(max-min);if(st>0)v=min+Math.round((v-min)/st)*st;v=Math.max(min,Math.min(max,v));
+  const s=String(+v.toFixed(10));if(r.value!==s){r.value=s;r.dispatchEvent(new Event('input',{bubbles:true}))}}
+document.addEventListener('pointerdown',e=>{if(e.pointerType!=='pen')return;const r=R(e.target);if(!r||r.disabled)return;
+  e.preventDefault();act={r,id:e.pointerId,v:r.value};try{r.setPointerCapture(e.pointerId)}catch(_){}
+  try{r.focus({preventScroll:true})}catch(_){r.focus()}setFrom(r,e.clientX)},{capture:true,passive:false});
+document.addEventListener('pointermove',e=>{if(!act||e.pointerId!==act.id)return;e.preventDefault();setFrom(act.r,e.clientX)},{capture:true,passive:false});
+const end=e=>{if(!act||e.pointerId!==act.id)return;const a=act;act=null;try{a.r.releasePointerCapture(e.pointerId)}catch(_){}
+  if(a.r.value!==a.v)a.r.dispatchEvent(new Event('change',{bubbles:true}))};
+document.addEventListener('pointerup',end,true);document.addEventListener('pointercancel',end,true);
+const stylus=e=>{const t=e.touches&&e.touches[0];return t&&t.touchType==='stylus'};
+document.addEventListener('touchstart',e=>{if(stylus(e)&&R(e.target))e.preventDefault()},{capture:true,passive:false});
+document.addEventListener('touchmove',e=>{if(act&&stylus(e))e.preventDefault()},{capture:true,passive:false});
+})();
+</script></body></html>
